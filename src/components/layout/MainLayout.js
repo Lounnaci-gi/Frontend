@@ -1,0 +1,51 @@
+import React from 'react';
+import { Box, CssBaseline, useMediaQuery, Toolbar } from '@mui/material';
+// Removed styled as it's no longer needed here
+// import { styled } from '@mui/material/styles';
+// import Sidebar from './Sidebar'; // Removed Sidebar import
+import Header from './Header'; // Header will become the Navbar
+import Footer from './Footer';
+
+// Removed the 'Main' styled component
+
+const MainLayout = ({ children }) => {
+  // We still keep isMobile for potential responsive adjustments in the Header/Navbar
+  const isMobile = useMediaQuery('(max-width:600px)');
+
+  // No need for handleDrawerToggle or open state as there's no sidebar to toggle
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', direction: 'rtl' }}>
+      <CssBaseline />
+      {/* Header component will now act as the Navbar */}
+      <Header isMobile={isMobile} /> 
+
+      {/* Add a Toolbar spacer to prevent content from being hidden by the fixed AppBar */}
+      <Toolbar />
+
+      {/* Main content container - Centered and no sidebar margin */}
+      <Box 
+        component="main" 
+        sx={{
+          flexGrow: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          p: '24px', // Keep internal padding
+          boxSizing: 'border-box', // Include padding in width calculation
+          maxWidth: '1200px', // Optional: Set a max width for centering
+          margin: '0 auto', // Center the content block
+          width: '100%', // Take full width up to maxWidth
+        }}
+      >
+        {children}
+        {/* Footer is moved outside this Box to be full width */}
+        {/* <Footer /> */}
+      </Box>
+
+      {/* Footer is now outside the centered main content to be full width */}
+      <Footer />
+    </Box>
+  );
+};
+
+export default MainLayout; 
