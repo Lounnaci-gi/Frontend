@@ -543,7 +543,7 @@ const Employees = () => {
           <Table stickyHeader>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ width: '8%' }}>الإجراءات</TableCell>
+                <TableCell sx={{ width: '12%', minWidth: '150px' }}>الإجراءات</TableCell>
                 <TableCell sx={{ width: '7%' }}>الحالة</TableCell>
                 <TableCell sx={{ width: '8%' }}>تاريخ التوظيف</TableCell>
                 <TableCell sx={{ width: '10%' }}>النعيين</TableCell>
@@ -572,14 +572,20 @@ const Employees = () => {
                     }}
                   >
                     <TableCell>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        gap: 0.5,
+                        justifyContent: 'flex-start',
+                        alignItems: 'center'
+                      }}>
                         <Tooltip title="تعديل">
                           <IconButton
                             size="small"
                             onClick={() => handleOpenForm(employee)}
                             color="primary"
+                            sx={{ padding: '4px' }}
                           >
-                            <EditIcon />
+                            <EditIcon sx={{ fontSize: 20 }} />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="حذف">
@@ -587,8 +593,9 @@ const Employees = () => {
                             size="small"
                             color="error"
                             onClick={() => handleDeleteClick(employee)}
+                            sx={{ padding: '4px' }}
                           >
-                            <DeleteIcon />
+                            <DeleteIcon sx={{ fontSize: 20 }} />
                           </IconButton>
                         </Tooltip>
                         <Tooltip title="طباعة البطاقة المهنية">
@@ -596,8 +603,9 @@ const Employees = () => {
                             size="small"
                             color="info"
                             onClick={() => handlePrintClick(employee)}
+                            sx={{ padding: '4px' }}
                           >
-                            <PrintIcon />
+                            <PrintIcon sx={{ fontSize: 20 }} />
                           </IconButton>
                         </Tooltip>
                       </Box>

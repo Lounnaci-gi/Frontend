@@ -169,6 +169,7 @@ const Dashboard = () => {
           borderBottom: '2px solid',
           borderColor: 'primary.main',
           pb: 2,
+          width: '100%'
         }}
       >
         لوحة التحكم
