@@ -67,8 +67,9 @@ const Header = ({ isMobile }) => {
               display: 'flex', 
               gap: 2,
               position: 'absolute',
-              left: '50%',
-              transform: 'translateX(-50%)'
+              right: '50%',
+              transform: 'translateX(50%)',
+              flexDirection: 'row-reverse'
             }}>
               {navItems.map((item) => (
                 <Button

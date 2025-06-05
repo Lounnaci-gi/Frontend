@@ -50,14 +50,18 @@ const auth = async (req, res, next) => {
 // Routes CRUD pour les employés
 router.post('/', auth, upload.single('photo'), async (req, res) => {
   try {
-    // Validation des champs requis
+    // Validation des champs requis (sans telephone et email qui sont optionnels)
     const requiredFields = [
       'matricule', 'nom', 'prenom', 'dateNaissance', 'lieuNaissance',
-      'adresse', 'telephone', 'email', 'dateEmbauche', 'poste',
-      'centre', 'sexe'
+      'adresse', 'dateEmbauche', 'poste', 'centre', 'sexe'
     ];
 
-    const missingFields = requiredFields.filter(field => !req.body[field]);
+    // Vérifier chaque champ
+    const missingFields = requiredFields.filter(field => {
+      const value = req.body[field];
+      return !value || (typeof value === 'string' && value.trim() === '');
+    });
+
     if (missingFields.length > 0) {
       return res.status(400).json({
         message: 'Champs manquants',
@@ -65,12 +69,14 @@ router.post('/', auth, upload.single('photo'), async (req, res) => {
       });
     }
 
-    // Validation du format de l'email
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(req.body.email)) {
-      return res.status(400).json({
-        message: 'Format d\'email invalide'
-      });
+    // Validation du format de l'email (seulement si fourni)
+    if (req.body.email && req.body.email.trim() !== '') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(req.body.email)) {
+        return res.status(400).json({
+          message: 'Format d\'email invalide'
+        });
+      }
     }
 
     // Validation du matricule (doit être unique)
@@ -103,13 +109,11 @@ router.post('/', auth, upload.single('photo'), async (req, res) => {
     const employee = await Employee.create(employeeData);
     res.status(201).json(employee);
   } catch (error) {
-    console.error('Erreur lors de la création de l\'employé:', error);
     if (req.file) {
       fs.unlinkSync(req.file.path);
     }
     res.status(400).json({ 
-      message: error.message || 'Erreur lors de la création de l\'employé',
-      details: error.errors ? Object.values(error.errors).map(err => err.message) : []
+      message: error.message || 'Erreur lors de la création de l\'employé'
     });
   }
 });

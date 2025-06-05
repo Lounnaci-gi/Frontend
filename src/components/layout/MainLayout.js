@@ -30,11 +30,11 @@ const MainLayout = ({ children }) => {
           flexGrow: 1,
           display: 'flex',
           flexDirection: 'column',
-          p: '24px', // Keep internal padding
-          boxSizing: 'border-box', // Include padding in width calculation
-          maxWidth: '1200px', // Optional: Set a max width for centering
-          margin: '0 auto', // Center the content block
-          width: '100%', // Take full width up to maxWidth
+          p: '16px', // Réduit le padding
+          boxSizing: 'border-box',
+          maxWidth: '1600px', // Augmenté de 1200px à 1600px
+          margin: '0 auto',
+          width: '100%',
         }}
       >
         {children}

@@ -3,14 +3,10 @@ import axiosInstance from '../config/axios';
 const authService = {
   login: async (email, password) => {
     try {
-      console.log('Tentative de connexion avec:', { email });
-      
       // Vérifier d'abord si le serveur répond
       try {
-        const healthCheck = await axiosInstance.get('/health');
-        console.log('Serveur en ligne:', healthCheck.data);
+        await axiosInstance.get('/health');
       } catch (error) {
-        console.error('Erreur lors de la vérification de santé du serveur:', error);
         throw error;
       }
       
@@ -18,8 +14,6 @@ const authService = {
         email,
         password
       });
-
-      console.log('Réponse du serveur:', response.data);
 
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
@@ -29,7 +23,6 @@ const authService = {
         throw new Error('Token non reçu du serveur');
       }
     } catch (error) {
-      console.error('Erreur de connexion:', error);
       throw error;
     }
   },

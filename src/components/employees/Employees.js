@@ -270,6 +270,7 @@ const EmployeePreview = ({ employee }) => {
 const Employees = () => {
   const dispatch = useDispatch();
   const cardRef = useRef(null);
+  const formRef = useRef(null);
   const { employees, loading: employeesLoading } = useSelector((state) => state.employees);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -281,7 +282,8 @@ const Employees = () => {
   const [filters, setFilters] = useState({
     status: 'all',
     centre: 'all',
-    poste: 'all'
+    poste: 'all',
+    sexe: 'all'
   });
   const [filterDialogOpen, setFilterDialogOpen] = useState(false);
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
@@ -321,7 +323,8 @@ const Employees = () => {
     setFilters({
       status: 'all',
       centre: 'all',
-      poste: 'all'
+      poste: 'all',
+      sexe: 'all'
     });
   };
 
@@ -345,12 +348,21 @@ const Employees = () => {
     // Filtrage par poste
     const posteMatch = filters.poste === 'all' || employee.poste === filters.poste;
 
-    return searchMatch && statusMatch && centreMatch && posteMatch;
+    // Filtrage par sexe
+    const sexeMatch = filters.sexe === 'all' || employee.sexe === filters.sexe;
+
+    return searchMatch && statusMatch && centreMatch && posteMatch && sexeMatch;
   });
 
   const handleOpenForm = (employee = null) => {
     setSelectedEmployee(employee);
     setOpenForm(true);
+    setTimeout(() => {
+      formRef.current?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }, 100);
   };
 
   const handleCloseForm = () => {
@@ -423,63 +435,25 @@ const Employees = () => {
 
   return (
     <Box sx={{ 
-      flexGrow: 1,
-      p: { xs: 0, sm: 1 },
       width: '100%',
-      height: '100vh',
-      overflow: 'auto',
-      position: 'relative',
-      zIndex: 1,
-      bgcolor: 'background.default',
       display: 'flex',
       flexDirection: 'column',
-      '@keyframes shine': {
-        '0%': { left: '-100%' },
-        '100%': { left: '150%' }
-      },
-      '& .MuiTableContainer-root': {
-        width: '100%',
-        overflowX: 'auto',
-        flex: 1,
-      },
-      '& .MuiTable-root': {
-        width: '100%',
-      },
-      '& .MuiPaper-root': {
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-      },
-      '& .MuiTableBody-root': {
-        flex: 1,
-      },
-      '& .MuiTableCell-root': {
-        padding: '8px 4px',
-        verticalAlign: 'middle',
-        '&:first-of-type': {
-          width: '120px',
-          minWidth: '120px',
-        },
-        '&:last-of-type': {
-          width: '80px',
-          minWidth: '80px',
-          textAlign: 'center',
-          padding: '4px',
-        }
-      }
+      alignItems: 'center',
+      bgcolor: 'background.default',
     }}>
       <Box sx={{ 
+        width: '100%',
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        mb: 1,
-        px: 1,
-        py: 1,
+        mb: 2,
+        p: 2,
         bgcolor: 'background.paper',
-        borderBottom: '1px solid',
-        borderColor: 'divider'
+        borderRadius: '8px 8px 0 0',
+        boxShadow: 1,
+        flexDirection: 'row-reverse',
       }}>
-        <Typography variant="h4" component="h1">
+        <Typography variant="h4" component="h1" sx={{ textAlign: 'right' }}>
           الموظفون
         </Typography>
         <Button
@@ -491,29 +465,52 @@ const Employees = () => {
         </Button>
       </Box>
 
-      <Paper sx={{
-        flex: 1,
+      <Box sx={{ 
+        width: '100%',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
-        borderRadius: 0,
-        width: '95%',
-        margin: '0 auto',
+        bgcolor: 'background.paper',
+        borderRadius: '0 0 8px 8px',
+        boxShadow: 1,
       }}>
+        {/* Barre de recherche et filtres */}
         <Box sx={{ 
-          p: 1, 
+          width: '100%',
+          p: 2,
           display: 'flex', 
-          gap: 1, 
+          gap: 2,
           flexWrap: 'wrap',
           alignItems: 'center',
           borderBottom: '1px solid',
-          borderColor: 'divider'
+          borderColor: 'divider',
+          flexDirection: 'row-reverse',
+          justifyContent: 'flex-start',
         }}>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<FilterListIcon />}
+            onClick={() => setFilterDialogOpen(true)}
+          >
+            تصفية
+          </Button>
           <TextField
             sx={{ 
               flexGrow: 1,
-              minWidth: '200px',
-              maxWidth: '400px'
+              minWidth: '300px',
+              maxWidth: '400px',
+              '& .MuiInputBase-root': {
+                direction: 'rtl',
+              },
+              '& .MuiInputLabel-root': {
+                right: 0,
+                left: 'auto',
+                transformOrigin: 'right',
+              },
+              '& .MuiInputAdornment-root': {
+                marginLeft: 0,
+                marginRight: 8,
+              }
             }}
             variant="outlined"
             size="small"
@@ -528,31 +525,35 @@ const Employees = () => {
               ),
             }}
           />
-          <Button
-            variant="outlined"
-            size="small"
-            startIcon={<FilterListIcon />}
-            onClick={() => setFilterDialogOpen(true)}
-          >
-            تصفية
-          </Button>
         </Box>
 
-        <TableContainer sx={{ flex: 1, overflow: 'auto' }}>
+        <TableContainer sx={{ 
+          width: '100%',
+          '& .MuiTable-root': {
+            width: '100%',
+            tableLayout: 'fixed',
+          },
+          '& .MuiTableCell-root': {
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            padding: '8px 16px',
+          }
+        }}>
           <Table stickyHeader>
             <TableHead>
               <TableRow>
-                <TableCell>الإجراءات</TableCell>
-                <TableCell>الحالة</TableCell>
-                <TableCell>تاريخ التوظيف</TableCell>
-                <TableCell>النعيين</TableCell>
-                <TableCell>الوظيفة</TableCell>
-                <TableCell>الجنس</TableCell>
-                <TableCell>تاريخ الميلاد</TableCell>
-                <TableCell>الاسم</TableCell>
-                <TableCell>اللقب</TableCell>
-                <TableCell>الرقم الوظيفي</TableCell>
-                <TableCell>الصورة</TableCell>
+                <TableCell sx={{ width: '8%' }}>الإجراءات</TableCell>
+                <TableCell sx={{ width: '7%' }}>الحالة</TableCell>
+                <TableCell sx={{ width: '8%' }}>تاريخ التوظيف</TableCell>
+                <TableCell sx={{ width: '10%' }}>النعيين</TableCell>
+                <TableCell sx={{ width: '10%' }}>الوظيفة</TableCell>
+                <TableCell sx={{ width: '6%' }}>الجنس</TableCell>
+                <TableCell sx={{ width: '8%' }}>تاريخ الميلاد</TableCell>
+                <TableCell sx={{ width: '12%' }}>الاسم</TableCell>
+                <TableCell sx={{ width: '12%' }}>اللقب</TableCell>
+                <TableCell sx={{ width: '8%' }}>الرقم الوظيفي</TableCell>
+                <TableCell sx={{ width: '6%' }}>الصورة</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -563,7 +564,12 @@ const Employees = () => {
                     key={employee._id}
                     onMouseEnter={() => setHoveredEmployee(employee)}
                     onMouseLeave={() => setHoveredEmployee(null)}
-                    sx={{ cursor: 'pointer' }}
+                    sx={{ 
+                      cursor: 'pointer',
+                      '&:hover': {
+                        backgroundColor: 'action.hover'
+                      }
+                    }}
                   >
                     <TableCell>
                       <Box sx={{ display: 'flex', gap: 1 }}>
@@ -665,28 +671,37 @@ const Employees = () => {
           onPageChange={handleChangePage}
           rowsPerPage={rowsPerPage}
           onRowsPerPageChange={handleChangeRowsPerPage}
-          rowsPerPageOptions={[5, 10, 25]}
+          rowsPerPageOptions={[10, 25, 50]}
           labelRowsPerPage="عدد الصفوف في الصفحة"
           labelDisplayedRows={({ from, to, count }) =>
             `${from}-${to} من ${count}`
           }
           sx={{
+            width: '100%',
             borderTop: '1px solid',
-            borderColor: 'divider'
+            borderColor: 'divider',
+            bgcolor: 'background.paper',
           }}
         />
-      </Paper>
+      </Box>
 
-      {/* Formulaire d'ajout/modification d'employé */}
       {openForm && (
-        <EmployeeForm 
-          open={openForm} 
-          onClose={handleCloseForm}
-          employee={selectedEmployee}
-        />
+        <Box 
+          ref={formRef} 
+          sx={{ 
+            width: '100%',
+            mt: 3,
+            mb: 3
+          }}
+        >
+          <EmployeeForm 
+            open={openForm} 
+            onClose={handleCloseForm}
+            employee={selectedEmployee}
+          />
+        </Box>
       )}
 
-      {/* Aperçu de l'employé affiché au survol, positionné à droite de la page */}
       {hoveredEmployee && (
         <Box sx={{
           position: 'fixed',      
@@ -774,6 +789,19 @@ const Employees = () => {
                     {status.label}
                   </MenuItem>
                 ))}
+              </Select>
+            </FormControl>
+
+            <FormControl fullWidth>
+              <InputLabel>الجنس</InputLabel>
+              <Select
+                value={filters.sexe}
+                onChange={(e) => handleFilterChange('sexe', e.target.value)}
+                label="الجنس"
+              >
+                <MenuItem value="all">الكل</MenuItem>
+                <MenuItem value="M">ذكر</MenuItem>
+                <MenuItem value="F">أنثى</MenuItem>
               </Select>
             </FormControl>
 

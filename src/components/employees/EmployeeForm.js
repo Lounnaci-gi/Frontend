@@ -11,6 +11,7 @@ import {
   Select,
   FormControl,
   InputLabel,
+  Dialog,
 } from '@mui/material';
 import { useDispatch } from 'react-redux';
 import { createEmployee, updateEmployee } from '../../redux/actions/employeeActions';
@@ -32,6 +33,7 @@ const sexeOptions = [
 const EmployeeForm = ({ open, onClose, employee }) => {
   const dispatch = useDispatch();
   const cardRef = useRef();
+  const formRef = useRef(null);
   const [isMatriculeValid, setIsMatriculeValid] = useState(employee ? true : false);
   const [isCheckingMatricule, setIsCheckingMatricule] = useState(false);
   const [formData, setFormData] = useState({
@@ -87,6 +89,27 @@ const EmployeeForm = ({ open, onClose, employee }) => {
     }
     setErrors({});
   }, [employee]);
+
+  useEffect(() => {
+    if (open && formRef.current) {
+      setTimeout(() => {
+        const dialogElement = formRef.current.closest('.MuiDialog-root');
+        if (dialogElement) {
+          const dialogPaper = dialogElement.querySelector('.MuiDialog-paper');
+          if (dialogPaper) {
+            const rect = dialogPaper.getBoundingClientRect();
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            const targetPosition = rect.top + scrollTop - 20; // 20px de marge en haut
+            
+            window.scrollTo({
+              top: targetPosition,
+              behavior: 'smooth'
+            });
+          }
+        }
+      }, 300);
+    }
+  }, [open]);
 
   const checkMatriculeExists = async (matricule) => {
     if (!matricule || matricule.length < 4) return;
@@ -152,7 +175,7 @@ const EmployeeForm = ({ open, onClose, employee }) => {
         break;
 
       case 'telephone':
-        // Format: 0554 23 62 14
+        // Format: 0663 97 94 46 (13 caractères au total avec les espaces)
         const phoneValue = value.replace(/[^0-9]/g, '');
         let formattedPhone = '';
         if (phoneValue.length > 0) {
@@ -202,11 +225,20 @@ const EmployeeForm = ({ open, onClose, employee }) => {
 
       case 'centre':
       case 'poste':
-        // Ne permet que les lettres arabes, espaces et tirets
+        // Permettre les lettres arabes, espaces et tirets
         const arabicValue = value.replace(/[^\u0600-\u06FF\s-]/g, '').slice(0, 50);
         setFormData(prev => ({
           ...prev,
           [name]: arabicValue
+        }));
+        break;
+
+      case 'sexe':
+      case 'status':
+        // Pour les champs de type Select, on accepte directement la valeur
+        setFormData(prev => ({
+          ...prev,
+          [name]: value
         }));
         break;
 
@@ -304,8 +336,6 @@ const EmployeeForm = ({ open, onClose, employee }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('handleSubmit called');
-    console.log('formData:', formData);
 
     // Vérification des champs requis de base
     if (!formData.matricule || !formData.nom || !formData.prenom || 
@@ -318,16 +348,12 @@ const EmployeeForm = ({ open, onClose, employee }) => {
       return;
     }
 
-    console.log('Base validation passed');
-
     const formDataToSend = new FormData();
     
     try {
-      formDataToSend.append('centre', formData.centre);
-      formDataToSend.append('poste', formData.poste);
-
+      // Ajouter tous les champs au FormData
       Object.keys(formData).forEach(key => {
-        if (formData[key] !== null && key !== 'centre' && key !== 'poste') {
+        if (formData[key] !== null) {
           formDataToSend.append(key, formData[key]);
         }
       });
@@ -363,88 +389,91 @@ const EmployeeForm = ({ open, onClose, employee }) => {
         onClose();
       }, 2000);
     } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error);
       setErrors(prev => ({
         ...prev,
-        submit: error.message || 'حدث خطأ أثناء الحفظ'
+        submit: error.response?.data?.message || error.message || 'حدث خطأ أثناء الحفظ'
       }));
     }
   };
 
   return (
     <Box
+      ref={formRef}
       sx={{
-        direction: 'ltr',
         width: '100%',
         bgcolor: 'background.paper',
-        borderTop: '1px solid',
+        borderRadius: 2,
+        boxShadow: 3,
+        mt: 3,
+        mb: 3,
+        p: 3,
+        position: 'relative',
+        border: '1px solid',
         borderColor: 'divider',
-        mt: 2,
-        p: 3
       }}
     >
-      <Typography variant="h6" sx={{ mb: 3, textAlign: 'left' }}>
-        {employee ? 'تعديل موظف' : 'إضافة موظف جديد'}
-      </Typography>
       <Box
-        component="form" 
-        onSubmit={handleSubmit} 
-        noValidate 
-        sx={{ 
-          mt: 0,
+        sx={{
           direction: 'ltr',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 2,
-          '& .MuiFormControl-root': {
-            width: '100%',
-            position: 'relative'
-          }
+          width: '100%',
+          bgcolor: 'background.paper',
+          borderTop: '1px solid',
+          borderColor: 'divider',
+          mt: 2,
+          p: 3
         }}
       >
-        <Stack spacing={3}>
-          <TextField
-            fullWidth
-            label="رقم التسجيل"
-            name="matricule"
-            value={formData.matricule}
-            onChange={handleChange}
-            error={!!errors.matricule}
-            helperText={
-              errors.matricule || 
-              (isCheckingMatricule ? 'جاري التحقق...' : 
-               isMatriculeValid ? 'رقم التسجيل متاح' : 
-               'أدخل 4 إلى 5 أرقام للتحقق')
+        <Typography variant="h6" sx={{ mb: 3, textAlign: 'left' }}>
+          {employee ? 'تعديل موظف' : 'إضافة موظف جديد'}
+        </Typography>
+        <Box
+          component="form" 
+          onSubmit={handleSubmit} 
+          noValidate 
+          sx={{ 
+            mt: 0,
+            direction: 'ltr',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2,
+            '& .MuiFormControl-root': {
+              width: '100%',
+              position: 'relative'
             }
-            required
-            InputLabelProps={{ shrink: true }}
-            inputProps={{
-              maxLength: 5,
-              minLength: 4,
-              pattern: '[0-9]*',
-              style: { width: '120px' }
-            }}
-            sx={{
-              '& .MuiInputBase-root': {
-                '&.Mui-focused': {
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: isMatriculeValid ? 'success.main' : 'primary.main'
-                  }
-                }
+          }}
+        >
+          <Stack spacing={3}>
+            <TextField
+              fullWidth={false}
+              label="رقم التسجيل"
+              name="matricule"
+              value={formData.matricule}
+              onChange={handleChange}
+              error={!!errors.matricule}
+              helperText={
+                errors.matricule || 
+                (isCheckingMatricule ? 'جاري التحقق...' : 
+                 isMatriculeValid ? 'رقم التسجيل متاح' : 
+                 'أدخل 4 إلى 5 أرقام للتحقق')
               }
-            }}
-          />
+              required
+              InputLabelProps={{ shrink: true }}
+              sx={{ 
+                width: '100px',
+                '& .MuiInputBase-root': {
+                  width: '100px'
+                }
+              }}
+              inputProps={{
+                maxLength: 5,
+                minLength: 4,
+                pattern: '[0-9]*'
+              }}
+            />
 
-          <Box
-            sx={{
-              opacity: isMatriculeValid ? 1 : 0.5,
-              pointerEvents: isMatriculeValid ? 'auto' : 'none',
-              transition: 'opacity 0.3s ease-in-out'
-            }}
-          >
-            <Stack spacing={3}>
+            <Stack direction="row" spacing={2}>
               <TextField
-                fullWidth
+                fullWidth={false}
                 label="الاسم"
                 name="nom"
                 value={formData.nom}
@@ -453,15 +482,15 @@ const EmployeeForm = ({ open, onClose, employee }) => {
                 helperText={errors.nom || 'أحرف عربية فقط (30 حرف كحد أقصى)'}
                 required
                 InputLabelProps={{ shrink: true }}
+                sx={{ width: '150px' }}
                 inputProps={{
-                  maxLength: 30,
-                  style: { width: '250px' }
+                  maxLength: 30
                 }}
                 disabled={!isMatriculeValid}
               />
 
               <TextField
-                fullWidth
+                fullWidth={false}
                 label="اللقب"
                 name="prenom"
                 value={formData.prenom}
@@ -470,294 +499,342 @@ const EmployeeForm = ({ open, onClose, employee }) => {
                 helperText={errors.prenom || 'أحرف عربية فقط (30 حرف كحد أقصى)'}
                 required
                 InputLabelProps={{ shrink: true }}
+                sx={{ width: '150px' }}
                 inputProps={{
-                  maxLength: 30,
-                  style: { width: '250px' }
+                  maxLength: 30
                 }}
                 disabled={!isMatriculeValid}
               />
+            </Stack>
 
-              <TextField
-                fullWidth
-                type="date"
-                label="تاريخ الميلاد"
-                name="dateNaissance"
-                value={formData.dateNaissance}
-                onChange={handleDateChange}
-                error={!!errors.dateNaissance}
-                helperText={errors.dateNaissance}
-                InputLabelProps={{ shrink: true }}
-                required
-                inputProps={{
-                  style: { width: '200px' }
-                }}
-                disabled={!isMatriculeValid}
-              />
-
-              <TextField
-                fullWidth
-                label="مكان الميلاد"
-                name="lieuNaissance"
-                value={formData.lieuNaissance}
-                onChange={handleChange}
-                error={!!errors.lieuNaissance}
-                helperText={errors.lieuNaissance || '100 حرف كحد أقصى'}
-                required
-                InputLabelProps={{ shrink: true }}
-                inputProps={{
-                  maxLength: 100,
-                  style: { width: '300px' }
-                }}
-                disabled={!isMatriculeValid}
-              />
-
-              <TextField
-                fullWidth
-                label="العنوان"
-                name="adresse"
-                value={formData.adresse}
-                onChange={handleChange}
-                error={!!errors.adresse}
-                helperText={errors.adresse || '100 حرف كحد أقصى'}
-                required
-                InputLabelProps={{ shrink: true }}
-                inputProps={{
-                  maxLength: 100,
-                  style: { width: '400px' }
-                }}
-                disabled={!isMatriculeValid}
-              />
-
-              <FormControl 
-                fullWidth 
-                error={!!errors.sexe} 
-                required
-                sx={{ width: '200px' }}
-                disabled={!isMatriculeValid}
-              >
-                <InputLabel id="sexe-label">الجنس</InputLabel>
-                <Select
-                  labelId="sexe-label"
-                  name="sexe"
-                  value={formData.sexe}
-                  onChange={handleChange}
-                  label="الجنس"
-                >
-                  {sexeOptions.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-                {errors.sexe && (
-                  <Typography color="error" variant="caption">
-                    {errors.sexe}
-                  </Typography>
-                )}
-              </FormControl>
-
-              <TextField
-                fullWidth
-                label="المركز"
-                name="centre"
-                value={formData.centre}
-                onChange={handleChange}
-                error={!!errors.centre}
-                helperText={errors.centre || 'أحرف عربية، مسافات، وشرطات (50 حرف كحد أقصى)'}
-                required
-                InputLabelProps={{ shrink: true }}
-                inputProps={{
-                  maxLength: 50,
-                  style: { width: '300px' }
-                }}
-                disabled={!isMatriculeValid}
-              />
-
-              <TextField
-                fullWidth
-                label="الوظيفة"
-                name="poste"
-                value={formData.poste}
-                onChange={handleChange}
-                error={!!errors.poste}
-                helperText={errors.poste || 'أحرف عربية، مسافات، وشرطات (50 حرف كحد أقصى)'}
-                required
-                InputLabelProps={{ shrink: true }}
-                inputProps={{
-                  maxLength: 50,
-                  style: { width: '300px' }
-                }}
-                disabled={!isMatriculeValid}
-              />
-
-              <TextField
-                fullWidth
-                type="date"
-                label="تاريخ التوظيف"
-                name="dateEmbauche"
-                value={formData.dateEmbauche}
-                onChange={handleDateChange}
-                error={!!errors.dateEmbauche}
-                helperText={errors.dateEmbauche}
-                InputLabelProps={{ shrink: true }}
-                required
-                inputProps={{
-                  style: { width: '200px' }
-                }}
-                disabled={!isMatriculeValid}
-              />
-
-              <TextField
-                fullWidth
-                label="رقم الهاتف (اختياري)"
-                name="telephone"
-                value={formData.telephone}
-                onChange={handleChange}
-                error={!!errors.telephone}
-                helperText={errors.telephone || 'مثال: 0554 23 62 14'}
-                InputLabelProps={{ shrink: true }}
-                inputProps={{
-                  maxLength: 12,
-                  style: { width: '200px' }
-                }}
-                disabled={!isMatriculeValid}
-              />
-
-              <TextField
-                fullWidth
-                label="البريد الإلكتروني (اختياري)"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                error={!!errors.email}
-                helperText={errors.email || '50 حرف كحد أقصى'}
-                InputLabelProps={{ shrink: true }}
-                inputProps={{
-                  maxLength: 50,
-                  style: { width: '300px' }
-                }}
-                disabled={!isMatriculeValid}
-              />
-
-              <FormControl 
-                fullWidth 
-                error={!!errors.status} 
-                required
-                sx={{ width: '200px' }}
-                disabled={!isMatriculeValid}
-              >
-                <InputLabel id="status-label">الحالة</InputLabel>
-                <Select
-                  labelId="status-label"
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  label="الحالة"
-                >
-                  {statuses.map((status) => (
-                    <MenuItem key={status.value} value={status.value}>
-                      {status.label}
-                    </MenuItem>
-                  ))}
-                </Select>
-                {errors.status && (
-                  <Typography color="error" variant="caption">
-                    {errors.status}
-                  </Typography>
-                )}
-              </FormControl>
-
-              <Stack 
-                direction="row" 
-                spacing={2} 
-                alignItems="center"
-                sx={{ 
-                  p: 2,
-                  border: '1px dashed',
-                  borderColor: 'divider',
-                  borderRadius: 1,
-                  minHeight: '56px'
-                }}
-              >
-                <Button
-                  variant="contained"
-                  component="label"
-                  color="primary"
-                  disabled={!isMatriculeValid}
-                >
-                  إضافة صورة (اختياري)
-                  <input
-                    type="file"
-                    hidden
-                    accept="image/*"
-                    onChange={handlePhotoChange}
+            <Box
+              sx={{
+                opacity: isMatriculeValid ? 1 : 0.5,
+                pointerEvents: isMatriculeValid ? 'auto' : 'none',
+                transition: 'opacity 0.3s ease-in-out'
+              }}
+            >
+              <Stack spacing={3}>
+                <Stack direction="row" spacing={2}>
+                  <TextField
+                    fullWidth={false}
+                    type="date"
+                    label="تاريخ الميلاد"
+                    name="dateNaissance"
+                    value={formData.dateNaissance}
+                    onChange={handleDateChange}
+                    error={!!errors.dateNaissance}
+                    helperText={errors.dateNaissance}
+                    InputLabelProps={{ shrink: true }}
+                    required
+                    sx={{ 
+                      width: '180px',
+                      '& .MuiInputBase-root': {
+                        width: '180px'
+                      }
+                    }}
                     disabled={!isMatriculeValid}
                   />
-                </Button>
-                {photoPreview && (
-                  <Box sx={{ 
-                    width: 100, 
-                    height: 100, 
-                    overflow: 'hidden', 
-                    borderRadius: '8px',
-                    border: '1px solid',
-                    borderColor: 'divider'
-                  }}>
-                    <img 
-                      src={photoPreview} 
-                      alt="Aperçu" 
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+
+                  <TextField
+                    fullWidth={false}
+                    label="مكان الميلاد"
+                    name="lieuNaissance"
+                    value={formData.lieuNaissance}
+                    onChange={handleChange}
+                    error={!!errors.lieuNaissance}
+                    helperText={errors.lieuNaissance || '100 حرف كحد أقصى'}
+                    required
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ width: '150px' }}
+                    inputProps={{
+                      maxLength: 100
+                    }}
+                    disabled={!isMatriculeValid}
+                  />
+                </Stack>
+
+                <TextField
+                  fullWidth={false}
+                  label="العنوان"
+                  name="adresse"
+                  value={formData.adresse}
+                  onChange={handleChange}
+                  error={!!errors.adresse}
+                  helperText={errors.adresse || '100 حرف كحد أقصى'}
+                  required
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ width: '200px' }}
+                  inputProps={{
+                    maxLength: 100
+                  }}
+                  disabled={!isMatriculeValid}
+                />
+
+                <FormControl 
+                  error={!!errors.sexe} 
+                  required
+                  sx={{ 
+                    width: '120px',
+                    '& .MuiInputBase-root': {
+                      width: '120px'
+                    }
+                  }}
+                  disabled={!isMatriculeValid}
+                >
+                  <InputLabel id="sexe-label">الجنس</InputLabel>
+                  <Select
+                    labelId="sexe-label"
+                    name="sexe"
+                    value={formData.sexe}
+                    onChange={handleChange}
+                    label="الجنس"
+                  >
+                    {sexeOptions.map((option) => (
+                      <MenuItem key={option.value} value={option.value}>
+                        {option.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {errors.sexe && (
+                    <Typography color="error" variant="caption">
+                      {errors.sexe}
+                    </Typography>
+                  )}
+                </FormControl>
+
+                <TextField
+                  fullWidth={false}
+                  label="المركز"
+                  name="centre"
+                  value={formData.centre}
+                  onChange={handleChange}
+                  error={!!errors.centre}
+                  helperText={errors.centre || 'أحرف عربية، مسافات، وشرطات (50 حرف كحد أقصى)'}
+                  required
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ width: '150px' }}
+                  inputProps={{
+                    maxLength: 50
+                  }}
+                  disabled={!isMatriculeValid}
+                />
+
+                <TextField
+                  fullWidth={false}
+                  label="الوظيفة"
+                  name="poste"
+                  value={formData.poste}
+                  onChange={handleChange}
+                  error={!!errors.poste}
+                  helperText={errors.poste || 'أحرف عربية، مسافات، وشرطات (50 حرف كحد أقصى)'}
+                  required
+                  InputLabelProps={{ shrink: true }}
+                  sx={{ width: '150px' }}
+                  inputProps={{
+                    maxLength: 50
+                  }}
+                  disabled={!isMatriculeValid}
+                />
+
+                <TextField
+                  fullWidth
+                  type="date"
+                  label="تاريخ التوظيف"
+                  name="dateEmbauche"
+                  value={formData.dateEmbauche}
+                  onChange={handleDateChange}
+                  error={!!errors.dateEmbauche}
+                  helperText={errors.dateEmbauche}
+                  InputLabelProps={{ shrink: true }}
+                  required
+                  sx={{ 
+                    width: '180px',
+                    '& .MuiInputBase-root': {
+                      width: '180px'
+                    }
+                  }}
+                  disabled={!isMatriculeValid}
+                />
+
+                <Stack direction="row" spacing={2}>
+                  <TextField
+                    fullWidth={false}
+                    label="رقم الهاتف (اختياري)"
+                    name="telephone"
+                    value={formData.telephone}
+                    onChange={handleChange}
+                    error={!!errors.telephone}
+                    helperText={errors.telephone || 'مثال: 0663 97 94 46'}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ 
+                      width: '250px',
+                      '& .MuiInputBase-root': {
+                        width: '250px',
+                        direction: 'ltr',
+                        textAlign: 'right'
+                      },
+                      '& .MuiInputBase-input': {
+                        textAlign: 'right',
+                        direction: 'ltr'
+                      }
+                    }}
+                    inputProps={{
+                      maxLength: 13, // Augmenté pour accommoder le format complet avec espaces
+                      style: { 
+                        textAlign: 'right',
+                        direction: 'ltr'
+                      }
+                    }}
+                    disabled={!isMatriculeValid}
+                  />
+
+                  <TextField
+                    fullWidth={false}
+                    label="البريد الإلكتروني (اختياري)"
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    error={!!errors.email}
+                    helperText={errors.email || '50 حرف كحد أقصى'}
+                    InputLabelProps={{ shrink: true }}
+                    sx={{ 
+                      width: '250px',
+                      '& .MuiInputBase-root': {
+                        width: '250px'
+                      }
+                    }}
+                    inputProps={{
+                      maxLength: 50
+                    }}
+                    disabled={!isMatriculeValid}
+                  />
+                </Stack>
+
+                <FormControl 
+                  error={!!errors.status} 
+                  required
+                  sx={{ 
+                    width: '120px',
+                    '& .MuiInputBase-root': {
+                      width: '120px'
+                    }
+                  }}
+                  disabled={!isMatriculeValid}
+                >
+                  <InputLabel id="status-label">الحالة</InputLabel>
+                  <Select
+                    labelId="status-label"
+                    name="status"
+                    value={formData.status}
+                    onChange={handleChange}
+                    label="الحالة"
+                  >
+                    {statuses.map((status) => (
+                      <MenuItem key={status.value} value={status.value}>
+                        {status.label}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  {errors.status && (
+                    <Typography color="error" variant="caption">
+                      {errors.status}
+                    </Typography>
+                  )}
+                </FormControl>
+
+                <Stack 
+                  direction="row" 
+                  spacing={2} 
+                  alignItems="center"
+                  sx={{ 
+                    p: 2,
+                    border: '1px dashed',
+                    borderColor: 'divider',
+                    borderRadius: 1,
+                    minHeight: '56px'
+                  }}
+                >
+                  <Button
+                    variant="contained"
+                    component="label"
+                    color="primary"
+                    disabled={!isMatriculeValid}
+                  >
+                    إضافة صورة (اختياري)
+                    <input
+                      type="file"
+                      hidden
+                      accept="image/*"
+                      onChange={handlePhotoChange}
+                      disabled={!isMatriculeValid}
                     />
-                  </Box>
-                )}
+                  </Button>
+                  {photoPreview && (
+                    <Box sx={{ 
+                      width: 100, 
+                      height: 100, 
+                      overflow: 'hidden', 
+                      borderRadius: '8px',
+                      border: '1px solid',
+                      borderColor: 'divider'
+                    }}>
+                      <img 
+                        src={photoPreview} 
+                        alt="Aperçu" 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    </Box>
+                  )}
+                </Stack>
               </Stack>
-            </Stack>
-          </Box>
-        </Stack>
-      </Box>
-      <Box sx={{ 
-        direction: 'ltr', 
-        display: 'flex',
-        justifyContent: 'flex-start', 
-        mt: 3,
-        gap: 2
-      }}>
-        <Button onClick={onClose} sx={{ mr: 1 }}>
-          إلغاء
-        </Button>
-        <Button 
-          type="submit" 
-          variant="contained" 
-          color="primary"
-          onClick={handleSubmit}
-          disabled={!isMatriculeValid && !employee}
+            </Box>
+          </Stack>
+        </Box>
+        <Box sx={{ 
+          direction: 'ltr', 
+          display: 'flex',
+          justifyContent: 'flex-start', 
+          mt: 3,
+          gap: 2
+        }}>
+          <Button onClick={onClose} sx={{ mr: 1 }}>
+            إلغاء
+          </Button>
+          <Button 
+            type="submit" 
+            variant="contained" 
+            color="primary"
+            onClick={handleSubmit}
+            disabled={!isMatriculeValid && !employee}
+          >
+            {employee ? 'تحديث' : 'حفظ'}
+          </Button>
+        </Box>
+
+        {/* Display submit error after buttons */}
+        {errors.submit && (
+          <Alert severity="error" sx={{ mt: 2, width: '100%' }}>
+            {errors.submit}
+          </Alert>
+        )}
+
+        <Snackbar
+          open={!!successMessage}
+          autoHideDuration={2000}
+          onClose={() => setSuccessMessage('')}
+          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         >
-          {employee ? 'تحديث' : 'حفظ'}
-        </Button>
-      </Box>
+          <Alert onClose={() => setSuccessMessage('')} severity="success" sx={{ width: '100%' }}>
+            {successMessage}
+          </Alert>
+        </Snackbar>
 
-      {/* Display submit error after buttons */}
-      {errors.submit && (
-        <Alert severity="error" sx={{ mt: 2, width: '100%' }}>
-          {errors.submit}
-        </Alert>
-      )}
-
-      <Snackbar
-        open={!!successMessage}
-        autoHideDuration={2000}
-        onClose={() => setSuccessMessage('')}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert onClose={() => setSuccessMessage('')} severity="success" sx={{ width: '100%' }}>
-          {successMessage}
-        </Alert>
-      </Snackbar>
-
-      {/* Ajouter le composant EmployeeCard caché pour l'impression */}
-      <Box sx={{ display: 'none' }}>
-        <EmployeeCard ref={cardRef} employee={employee || formData} />
+        {/* Ajouter le composant EmployeeCard caché pour l'impression */}
+        <Box sx={{ display: 'none' }}>
+          <EmployeeCard ref={cardRef} employee={employee || formData} />
+        </Box>
       </Box>
     </Box>
   );
