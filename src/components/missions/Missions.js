@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
@@ -88,7 +88,7 @@ const Missions = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [missionToDelete, setMissionToDelete] = useState(null);
   const [employees, setEmployees] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [selectedCentre, setSelectedCentre] = useState('all');
   const [centres, setCentres] = useState([]);
   const [selectedEmployees, setSelectedEmployees] = useState([]);
@@ -98,28 +98,24 @@ const Missions = () => {
     startDate: null,
     endDate: null,
   });
+  const [groupMissionData, setGroupMissionData] = useState({
+    destination: '',
+    dateDebut: null,
+    dateFin: null
+  });
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
         setLoading(true);
-        console.log('Fetching employees...');
         const response = await axiosInstance.get('/employees');
-        console.log('Employees response:', response.data);
-        
-        // Vérifier la structure des données
+        console.log('Employees data:', response.data);
         if (Array.isArray(response.data)) {
-          // Log détaillé pour voir la structure exacte des données
-          console.log('Sample employee data:', response.data[0]);
-          console.log('Employee status type:', typeof response.data[0]?.status);
-          console.log('Employee status value:', response.data[0]?.status);
-          
-          // Filtrer les employés actifs en vérifiant les deux valeurs possibles
+          // Filtrer les employés actifs
           const activeEmployees = response.data.filter(emp => 
             emp.status === 'active' || emp.status === 'نشط' || emp.status === 'Active'
           );
-          
-          console.log('Number of active employees:', activeEmployees.length);
           console.log('Active employees:', activeEmployees);
           setEmployees(activeEmployees);
           
@@ -131,7 +127,7 @@ const Missions = () => {
           console.error('Invalid employees data format:', response.data);
         }
       } catch (error) {
-        console.error('Erreur lors du chargement des employés:', error);
+        console.error('Error fetching employees:', error);
       } finally {
         setLoading(false);
       }
@@ -217,18 +213,29 @@ const Missions = () => {
     dispatch(fetchMissionsSuccess(response.data));
   };
 
-  const filteredEmployees = employees.filter(employee => {
-    if (!employee) {
-      console.log('Invalid employee data:', employee);
-      return false;
-    }
+  const filteredEmployees = useMemo(() => {
+    console.log('Filtering employees:', {
+      total: employees.length,
+      selectedCentre,
+      searchTerm
+    });
     
-    const matchesCentre = selectedCentre === 'all' || employee.centre === selectedCentre;
-    const matchesSearch = searchTerm === '' || 
-      `${employee.nom || ''} ${employee.prenom || ''}`.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    return matchesCentre && matchesSearch;
-  });
+    return employees.filter(employee => {
+      const matchesCentre = selectedCentre === 'all' || employee.centre === selectedCentre;
+      const matchesSearch = !searchTerm || 
+        employee.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        employee.prenom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        employee.matricule?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      console.log('Employee filter check:', {
+        matricule: employee.matricule,
+        matchesCentre,
+        matchesSearch
+      });
+      
+      return matchesCentre && matchesSearch;
+    });
+  }, [employees, selectedCentre, searchTerm]);
 
   const handleEmployeeSelect = (employee) => {
     setSelectedEmployees(prev => {
@@ -290,283 +297,208 @@ const Missions = () => {
   };
 
   const renderEmployeesList = () => {
-    console.log('Rendering employees list. Total active employees:', employees.length);
-    console.log('Filtered employees:', filteredEmployees.length);
-    console.log('Selected centre:', selectedCentre);
-    console.log('Search term:', searchTerm);
+    console.log('Rendering employees list:', {
+      loading,
+      totalEmployees: employees.length,
+      filteredEmployees: filteredEmployees.length,
+      selectedCentre,
+      searchTerm
+    });
     
     return (
-      <Box sx={{ mt: 3 }}>
-        {loading ? (
-          <Typography sx={{ textAlign: 'center', py: 2 }}>
-            جاري التحميل...
+      <>
+        <Paper sx={{ mb: 2, p: 2 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 2, 
+            flexDirection: { xs: 'column', sm: 'row' },
+            alignItems: { xs: 'stretch', sm: 'center' },
+            justifyContent: 'flex-end'
+          }}>
+            <FormControl sx={{ minWidth: 200 }}>
+              <InputLabel>النعيين</InputLabel>
+              <Select
+                value={selectedCentre}
+                onChange={(e) => setSelectedCentre(e.target.value)}
+                label="النعيين"
+              >
+                <MenuItem value="all">جميع النعيين</MenuItem>
+                {centres.map((centre) => (
+                  <MenuItem key={centre} value={centre}>
+                    {centre}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder="بحث عن موظف..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Box>
+        </Paper>
+
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+          gap: 2,
+          px: 3,
+          mx: 0,
+          mb: 2,
+          flexDirection: 'row-reverse'
+        }}>
+          <Box sx={{ width: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }} />
+          <Box sx={{ width: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }} />
+          <Typography sx={{ width: '80px', textAlign: 'right', px: 0 }}>
+            الحالة
           </Typography>
-        ) : employees.length === 0 ? (
-          <Typography sx={{ textAlign: 'center', py: 2, color: 'error.main' }}>
-            لا يوجد موظفين نشطين
+          <Typography sx={{ width: '100px', textAlign: 'right', px: 0 }}>
+            الهاتف
           </Typography>
-        ) : (
-          <>
-            <Box sx={{ 
-              display: 'flex', 
-              gap: 2, 
-              mb: 2,
-              flexDirection: { xs: 'column', sm: 'row' },
-              alignItems: { xs: 'stretch', sm: 'center' },
-              justifyContent: 'flex-end'
-            }}>
-              <FormControl sx={{ minWidth: 200 }}>
-                <InputLabel>النعيين</InputLabel>
-                <Select
-                  value={selectedCentre}
-                  onChange={(e) => setSelectedCentre(e.target.value)}
-                  label="النعيين"
-                >
-                  <MenuItem value="all">جميع النعيين</MenuItem>
-                  {centres.map((centre) => (
-                    <MenuItem key={centre} value={centre}>
-                      {centre}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <TextField
-                fullWidth
-                variant="outlined"
-                placeholder="بحث عن موظف..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Box>
+          <Typography sx={{ width: '80px', textAlign: 'right', px: 0 }}>
+            الجنس
+          </Typography>
+          <Typography sx={{ width: '120px', textAlign: 'right', px: 0 }}>
+            الوظيفة
+          </Typography>
+          <Typography sx={{ width: '200px', textAlign: 'left', px: 0, pl: 2 }}>
+            الاسم و اللقب
+          </Typography>
+          <Typography sx={{ width: '80px', textAlign: 'left', px: 0, pl: 2 }}>
+            رمز الموظف
+          </Typography>
+        </Box>
 
-            <Box sx={{ 
-              mb: 2, 
-              display: 'flex', 
-              justifyContent: 'flex-end', 
-              alignItems: 'center',
-              flexDirection: { xs: 'column', sm: 'row' },
-              gap: 2
-            }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Button
-                  variant="outlined"
-                  onClick={handleSelectAll}
-                  sx={{ minWidth: '150px' }}
-                  disabled={filteredEmployees.length === 0}
-                >
-                  {filteredEmployees.every(emp => 
-                    selectedEmployees.some(selected => selected._id === emp._id)
-                  ) ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
-                </Button>
-                {selectedEmployees.length > 0 && (
-                  <Typography>
-                    {selectedEmployees.length} موظف محدد
-                  </Typography>
-                )}
-              </Box>
-              {selectedEmployees.length > 0 && (
-                <Button
-                  variant="contained"
-                  startIcon={<AssignmentIcon />}
-                  onClick={() => setGroupMissionDialogOpen(true)}
-                >
-                  إنشاء مهمة للموظفين المحددين
-                </Button>
-              )}
-            </Box>
-
-            <Paper>
-              <Box sx={{
-                p: 2,
-                borderBottom: 1,
-                borderColor: 'divider',
-                display: 'flex',
-                flexDirection: 'row-reverse',
-                alignItems: 'center',
-                gap: 2,
-                justifyContent: 'flex-end',
-                bgcolor: 'background.paper',
-                px: 3
-              }}>
-                <Box sx={{ width: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                  <Typography sx={{ visibility: 'hidden' }}>✓</Typography>
-                </Box>
-                <Box sx={{ width: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                  <Typography sx={{ visibility: 'hidden' }}>👤</Typography>
-                </Box>
-                <Typography sx={{
-                  minWidth: '80px',
-                  textAlign: 'left',
-                  fontWeight: 'bold',
-                  color: 'text.primary'
-                }}>
-                  الرمز
-                </Typography>
-                <Typography sx={{
-                  minWidth: '200px',
-                  textAlign: 'left',
-                  fontWeight: 'bold',
-                  color: 'text.primary'
-                }}>
-                  الاسم و اللقب
-                </Typography>
-                <Typography sx={{
-                  minWidth: '120px',
-                  textAlign: 'right',
-                  fontWeight: 'bold',
-                  color: 'text.primary'
-                }}>
-                  الوظيفة
-                </Typography>
-                <Typography sx={{
-                  minWidth: '80px',
-                  textAlign: 'right',
-                  fontWeight: 'bold',
-                  color: 'text.primary'
-                }}>
-                  الجنس
-                </Typography>
-                <Typography sx={{
-                  minWidth: '100px',
-                  textAlign: 'right',
-                  fontWeight: 'bold',
-                  color: 'text.primary'
-                }}>
-                  الهاتف
-                </Typography>
-                <Box sx={{ minWidth: '80px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                  <Typography sx={{ visibility: 'hidden' }}>الحالة</Typography>
-                </Box>
-              </Box>
-              <List sx={{ px: 3 }}>
-                {filteredEmployees.length > 0 ? (
-                  filteredEmployees.map((employee, index) => (
-                    <React.Fragment key={employee._id}>
-                      <ListItem
-                        sx={{
-                          '&:hover': {
-                            bgcolor: 'action.hover',
-                          },
-                          flexDirection: 'row-reverse',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 2,
-                          justifyContent: 'flex-end'
-                        }}
-                      >
-                        <Box sx={{ width: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                          <Checkbox
-                            edge="end"
-                            checked={selectedEmployees.some(emp => emp._id === employee._id)}
-                            onChange={() => handleEmployeeSelect(employee)}
-                          />
-                        </Box>
-                        <ListItemIcon sx={{ minWidth: 'auto', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                          <PersonIcon color="primary" />
-                        </ListItemIcon>
-                        <Typography sx={{ minWidth: '80px', textAlign: 'left' }}>
-                          {employee.matricule}
-                        </Typography>
-                        <ListItemText
-                          primary={`${employee.nom} ${employee.prenom}`}
-                          sx={{
-                            textAlign: 'left',
-                            minWidth: '200px',
-                            '& .MuiListItemText-primary': {
-                              fontWeight: 'medium',
-                            },
-                          }}
-                        />
-                        <Typography sx={{ minWidth: '120px', textAlign: 'right' }}>
-                          {employee.poste || '-'}
-                        </Typography>
-                        <Typography sx={{ minWidth: '80px', textAlign: 'right' }}>
-                          {employee.sexe === 'M' ? 'ذكر' : 'أنثى'}
-                        </Typography>
-                        <Typography sx={{ minWidth: '100px', textAlign: 'right' }}>
-                          {employee.telephone || '-'}
-                        </Typography>
-                        <Box sx={{ minWidth: '80px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                          <Chip
-                            label="نشط"
-                            color="success"
-                            size="small"
-                          />
-                        </Box>
-                      </ListItem>
-                      {index < filteredEmployees.length - 1 && <Divider />}
-                    </React.Fragment>
-                  ))
-                ) : (
-                  <ListItem>
-                    <ListItemText 
-                      primary="لا يوجد موظفون نشطين في هذه الفئة"
-                      sx={{ textAlign: 'center' }}
-                    />
-                  </ListItem>
-                )}
-              </List>
-            </Paper>
-          </>
-        )}
-
-        <Dialog
-          open={groupMissionDialogOpen}
-          onClose={() => setGroupMissionDialogOpen(false)}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle>إنشاء مهمة للموظفين المحددين</DialogTitle>
-          <DialogContent>
-            <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <TextField
-                fullWidth
-                label="الوجهة"
-                value={selectedDestination}
-                onChange={(e) => setSelectedDestination(e.target.value)}
-                required
-              />
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  label="تاريخ البداية"
-                  value={missionDates.startDate}
-                  onChange={(date) => setMissionDates(prev => ({ ...prev, startDate: date }))}
-                  renderInput={(params) => (
-                    <TextField {...params} fullWidth required />
-                  )}
-                />
-                <DatePicker
-                  label="تاريخ النهاية"
-                  value={missionDates.endDate}
-                  onChange={(date) => setMissionDates(prev => ({ ...prev, endDate: date }))}
-                  renderInput={(params) => (
-                    <TextField {...params} fullWidth required sx={{ mt: 2 }} />
-                  )}
-                />
-              </LocalizationProvider>
-            </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setGroupMissionDialogOpen(false)}>
-              إلغاء
-            </Button>
+        <Box sx={{ 
+          mb: 2, 
+          display: 'flex', 
+          justifyContent: 'flex-end', 
+          alignItems: 'center',
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: 2,
+          px: 3
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Button
-              onClick={handleCreateGroupMission}
-              variant="contained"
-              disabled={!selectedDestination || !missionDates.startDate || !missionDates.endDate}
+              variant="outlined"
+              onClick={handleSelectAll}
+              sx={{ minWidth: '150px' }}
+              disabled={filteredEmployees.length === 0}
             >
-              إنشاء المهمة
+              {filteredEmployees.every(emp => 
+                selectedEmployees.some(selected => selected._id === emp._id)
+              ) ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
             </Button>
-          </DialogActions>
-        </Dialog>
-      </Box>
+            {selectedEmployees.length > 0 && (
+              <Typography>
+                {selectedEmployees.length} موظف محدد
+              </Typography>
+            )}
+          </Box>
+          {selectedEmployees.length > 0 && (
+            <Button
+              variant="contained"
+              startIcon={<AssignmentIcon />}
+              onClick={() => setGroupMissionDialogOpen(true)}
+            >
+              إنشاء مهمة للموظفين المحددين
+            </Button>
+          )}
+        </Box>
+
+        <Paper sx={{ mt: 2 }}>
+          <List sx={{ px: 3, mx: 0 }}>
+            {filteredEmployees.length > 0 ? (
+              filteredEmployees
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((employee, index) => (
+                  <React.Fragment key={employee._id}>
+                    <ListItem
+                      sx={{
+                        '&:hover': {
+                          bgcolor: 'action.hover',
+                        },
+                        flexDirection: 'row-reverse',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2,
+                        justifyContent: 'flex-start',
+                        px: 0,
+                        mx: 0
+                      }}
+                    >
+                      <Box sx={{ width: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                        <Checkbox
+                          edge="end"
+                          checked={selectedEmployees.some(emp => emp._id === employee._id)}
+                          onChange={() => handleEmployeeSelect(employee)}
+                        />
+                      </Box>
+                      <ListItemIcon sx={{ width: '40px', minWidth: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                        <PersonIcon color="primary" />
+                      </ListItemIcon>
+                      <Typography sx={{ 
+                        width: '80px', 
+                        textAlign: 'right', 
+                        px: 0,
+                        pr: 2
+                      }}>
+                        {employee.matricule}
+                      </Typography>
+                      <Box sx={{ width: '200px', textAlign: 'right', px: 0, pr: 2 }}>
+                        <Typography sx={{ fontWeight: 'medium' }}>
+                          {`${employee.nom} ${employee.prenom}`}
+                        </Typography>
+                      </Box>
+                      <Typography sx={{ width: '120px', textAlign: 'right', px: 0 }}>
+                        {employee.poste || '-'}
+                      </Typography>
+                      <Typography sx={{ 
+                        width: '120px', 
+                        textAlign: 'right', 
+                        px: 0,
+                        pr: 2
+                      }}>
+                        {employee.affectation || '-'}
+                      </Typography>
+                      <Typography sx={{ width: '80px', textAlign: 'right', px: 0 }}>
+                        {employee.sexe === 'M' ? 'ذكر' : 'أنثى'}
+                      </Typography>
+                      <Typography sx={{ width: '100px', textAlign: 'right', px: 0 }}>
+                        {employee.telephone || '-'}
+                      </Typography>
+                      <Box sx={{ width: '80px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                        <Chip
+                          label="نشط"
+                          color="success"
+                          size="small"
+                        />
+                      </Box>
+                    </ListItem>
+                    {index < filteredEmployees.length - 1 && <Divider />}
+                  </React.Fragment>
+                ))
+            ) : (
+              <ListItem>
+                <ListItemText 
+                  primary="لا يوجد موظفون نشطين في هذه الفئة"
+                  sx={{ textAlign: 'center' }}
+                />
+              </ListItem>
+            )}
+          </List>
+        </Paper>
+      </>
     );
   };
 
@@ -620,45 +552,194 @@ const Missions = () => {
           <Tab label="المهام" />
         </Tabs>
 
-        {tabValue === 0 && renderEmployeesList()}
+        {tabValue === 0 && (
+          <>
+            <Paper sx={{ mb: 2, p: 2 }}>
+              <Box sx={{ 
+                display: 'flex', 
+                gap: 2, 
+                flexDirection: { xs: 'column', sm: 'row' },
+                alignItems: { xs: 'stretch', sm: 'center' },
+                justifyContent: 'flex-end'
+              }}>
+                <FormControl sx={{ minWidth: 200 }}>
+                  <InputLabel>النعيين</InputLabel>
+                  <Select
+                    value={selectedCentre}
+                    onChange={(e) => setSelectedCentre(e.target.value)}
+                    label="النعيين"
+                  >
+                    <MenuItem value="all">جميع النعيين</MenuItem>
+                    {centres.map((centre) => (
+                      <MenuItem key={centre} value={centre}>
+                        {centre}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <TextField
+                  fullWidth
+                  variant="outlined"
+                  placeholder="بحث عن موظف..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon />
+                      </InputAdornment>
+                    ),
+                  }}
+                />
+              </Box>
+            </Paper>
+
+            <Box sx={{ 
+              mb: 2, 
+              display: 'flex', 
+              justifyContent: 'flex-end', 
+              alignItems: 'center',
+              flexDirection: { xs: 'column', sm: 'row' },
+              gap: 2,
+              px: 3
+            }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Button
+                  variant="outlined"
+                  onClick={handleSelectAll}
+                  sx={{ minWidth: '150px' }}
+                  disabled={filteredEmployees.length === 0}
+                >
+                  {filteredEmployees.every(emp => 
+                    selectedEmployees.some(selected => selected._id === emp._id)
+                  ) ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
+                </Button>
+                {selectedEmployees.length > 0 && (
+                  <Typography>
+                    {selectedEmployees.length} موظف محدد
+                  </Typography>
+                )}
+              </Box>
+              {selectedEmployees.length > 0 && (
+                <Button
+                  variant="contained"
+                  startIcon={<AssignmentIcon />}
+                  onClick={() => setGroupMissionDialogOpen(true)}
+                >
+                  إنشاء مهمة للموظفين المحددين
+                </Button>
+              )}
+            </Box>
+
+            <Paper sx={{ mt: 2 }}>
+              <List sx={{ px: 3, mx: 0 }}>
+                {filteredEmployees.length > 0 ? (
+                  filteredEmployees
+                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                    .map((employee, index) => (
+                      <React.Fragment key={employee._id}>
+                        <ListItem
+                          sx={{
+                            '&:hover': {
+                              bgcolor: 'action.hover',
+                            },
+                            flexDirection: 'row-reverse',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 2,
+                            justifyContent: 'flex-start',
+                            px: 0,
+                            mx: 0
+                          }}
+                        >
+                          <Box sx={{ width: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                            <Checkbox
+                              edge="end"
+                              checked={selectedEmployees.some(emp => emp._id === employee._id)}
+                              onChange={() => handleEmployeeSelect(employee)}
+                            />
+                          </Box>
+                          <ListItemIcon sx={{ width: '40px', minWidth: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                            <PersonIcon color="primary" />
+                          </ListItemIcon>
+                          <Typography sx={{ 
+                            width: '80px', 
+                            textAlign: 'right', 
+                            px: 0,
+                            pr: 2
+                          }}>
+                            {employee.matricule}
+                          </Typography>
+                          <Box sx={{ width: '200px', textAlign: 'right', px: 0, pr: 2 }}>
+                            <Typography sx={{ fontWeight: 'medium' }}>
+                              {`${employee.nom} ${employee.prenom}`}
+                            </Typography>
+                          </Box>
+                          <Typography sx={{ width: '120px', textAlign: 'right', px: 0 }}>
+                            {employee.poste || '-'}
+                          </Typography>
+                          <Typography sx={{ 
+                            width: '120px', 
+                            textAlign: 'right', 
+                            px: 0,
+                            pr: 2
+                          }}>
+                            {employee.affectation || '-'}
+                          </Typography>
+                          <Typography sx={{ width: '80px', textAlign: 'right', px: 0 }}>
+                            {employee.sexe === 'M' ? 'ذكر' : 'أنثى'}
+                          </Typography>
+                          <Typography sx={{ width: '100px', textAlign: 'right', px: 0 }}>
+                            {employee.telephone || '-'}
+                          </Typography>
+                          <Box sx={{ width: '80px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                            <Chip
+                              label="نشط"
+                              color="success"
+                              size="small"
+                            />
+                          </Box>
+                        </ListItem>
+                        {index < filteredEmployees.length - 1 && <Divider />}
+                      </React.Fragment>
+                    ))
+                ) : (
+                  <ListItem>
+                    <ListItemText 
+                      primary="لا يوجد موظفون نشطين في هذه الفئة"
+                      sx={{ textAlign: 'center' }}
+                    />
+                  </ListItem>
+                )}
+              </List>
+              <TablePagination
+                rowsPerPageOptions={[5, 10, 25]}
+                component="div"
+                count={filteredEmployees.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                labelRowsPerPage="عدد الصفوف في الصفحة"
+                labelDisplayedRows={({ from, to, count }) => `${from}-${to} من ${count}`}
+              />
+            </Paper>
+          </>
+        )}
         {tabValue === 1 && <MissionForm />}
       </Paper>
-
-      <Box sx={{ p: 2, display: 'flex', gap: 2 }}>
-        <TextField
-          fullWidth
-          variant="outlined"
-          placeholder="بحث..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-        <Button
-          variant="outlined"
-          startIcon={<FilterListIcon />}
-          onClick={() => {/* TODO: Ouvrir les filtres */}}
-        >
-          تصفية
-        </Button>
-      </Box>
 
       <TableContainer>
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell align="right">رمز الموظف</TableCell>
-              <TableCell align="right">الاسم</TableCell>
-              <TableCell align="right">اللقب</TableCell>
-              <TableCell align="right">الوظيفة</TableCell>
-              <TableCell align="right">الجنس</TableCell>
-              <TableCell align="right">الهاتف</TableCell>
-              <TableCell align="right">الحالة</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 'bold' }}>الهاتف</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 'bold' }}>الجنس</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 'bold' }}>الوظيفة</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 'bold' }}>اللقب</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 'bold' }}>الاسم</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 'bold' }}>رمز الموظف</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -666,46 +747,18 @@ const Missions = () => {
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((mission) => (
                 <TableRow key={mission.code}>
-                  <TableCell align="right">{mission.employee.code}</TableCell>
-                  <TableCell align="right">{mission.employee.nom}</TableCell>
-                  <TableCell align="right">{mission.employee.prenom}</TableCell>
-                  <TableCell align="right">{mission.employee.fonction}</TableCell>
-                  <TableCell align="right">{mission.employee.sexe === 'M' ? 'ذكر' : 'أنثى'}</TableCell>
+                  <TableCell align="right">{mission.employee.status === 'active' ? 'نشط' : mission.employee.status === 'inactive' ? 'غير نشط' : mission.employee.status}</TableCell>
                   <TableCell align="right">{mission.employee.telephone || '-'}</TableCell>
-                  <TableCell align="right">
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <Chip
-                        label={
-                          mission.employee.status === 'active'
-                            ? 'نشط'
-                            : mission.employee.status === 'inactive'
-                            ? 'غير نشط'
-                            : mission.employee.status
-                        }
-                        color={mission.employee.status === 'active' ? 'success' : 'default'}
-                        size="small"
-                      />
-                    </Box>
-                  </TableCell>
+                  <TableCell align="right">{mission.employee.sexe === 'M' ? 'ذكر' : 'أنثى'}</TableCell>
+                  <TableCell align="right">{mission.employee.fonction}</TableCell>
+                  <TableCell align="right">{mission.employee.prenom}</TableCell>
+                  <TableCell align="right">{mission.employee.nom}</TableCell>
+                  <TableCell align="right">{mission.employee.code}</TableCell>
                 </TableRow>
               ))}
           </TableBody>
         </Table>
       </TableContainer>
-
-      <TablePagination
-        component="div"
-        count={filteredMissions.length}
-        page={page}
-        onPageChange={handleChangePage}
-        rowsPerPage={rowsPerPage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-        rowsPerPageOptions={[5, 10, 25]}
-        labelRowsPerPage="عدد الصفوف في الصفحة"
-        labelDisplayedRows={({ from, to, count }) =>
-          `${from}-${to} من ${count}`
-        }
-      />
 
       <MissionForm
         open={formOpen}
@@ -728,6 +781,56 @@ const Missions = () => {
           <Button onClick={handleDeleteCancel}>إلغاء</Button>
           <Button onClick={handleDeleteConfirm} color="error" variant="contained">
             حذف
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={groupMissionDialogOpen}
+        onClose={() => setGroupMissionDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>إنشاء مهمة للموظفين المحددين</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <TextField
+              fullWidth
+              label="الوجهة"
+              value={selectedDestination}
+              onChange={(e) => setSelectedDestination(e.target.value)}
+              required
+            />
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
+              <DatePicker
+                label="تاريخ البداية"
+                value={missionDates.startDate}
+                onChange={(date) => setMissionDates(prev => ({ ...prev, startDate: date }))}
+                renderInput={(params) => (
+                  <TextField {...params} fullWidth required />
+                )}
+              />
+              <DatePicker
+                label="تاريخ النهاية"
+                value={missionDates.endDate}
+                onChange={(date) => setMissionDates(prev => ({ ...prev, endDate: date }))}
+                renderInput={(params) => (
+                  <TextField {...params} fullWidth required sx={{ mt: 2 }} />
+                )}
+              />
+            </LocalizationProvider>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setGroupMissionDialogOpen(false)}>
+            إلغاء
+          </Button>
+          <Button
+            onClick={handleCreateGroupMission}
+            variant="contained"
+            disabled={!selectedDestination || !missionDates.startDate || !missionDates.endDate}
+          >
+            إنشاء المهمة
           </Button>
         </DialogActions>
       </Dialog>
