@@ -36,6 +36,8 @@ router.get('/', auth, async (req, res) => {
       .populate('employee')
       .populate('destinations')
       .sort({ createdAt: -1 });
+    console.log('Missions from database:', missions);
+    console.log('Sample mission employee:', missions[0]?.employee);
     res.json(missions);
   } catch (error) {
     res.status(500).json({ message: error.message });

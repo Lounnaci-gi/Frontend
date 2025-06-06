@@ -155,25 +155,32 @@ const Dashboard = () => {
       bgcolor: 'background.default',
       minHeight: '100vh',
       direction: 'rtl',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'flex-end'
     }}>
-      <Typography 
-        variant="h4" 
-        component="h1" 
-        gutterBottom
-        sx={{ 
-          mb: 4,
-          fontWeight: 'bold',
-          color: 'text.primary',
-          pt: 2,
-          textAlign: 'right',
-          borderBottom: '2px solid',
-          borderColor: 'primary.main',
-          pb: 2,
-          width: '100%'
-        }}
-      >
-        لوحة التحكم
-      </Typography>
+      <Box sx={{ width: '100%', textAlign: 'right' }}>
+        <Typography 
+          variant="h4" 
+          component="h1" 
+          gutterBottom
+          sx={{ 
+            mb: 4,
+            fontWeight: 'bold',
+            color: 'text.primary',
+            pt: 2,
+            textAlign: 'right',
+            borderBottom: '2px solid',
+            borderColor: 'primary.main',
+            pb: 2,
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'flex-end'
+          }}
+        >
+          لوحة التحكم
+        </Typography>
+      </Box>
 
       {/* Statistiques */}
       <Grid container spacing={3} sx={{ mb: 4 }}>

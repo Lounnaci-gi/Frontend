@@ -145,6 +145,8 @@ const Missions = () => {
       try {
         dispatch(fetchMissionsStart());
         const response = await axiosInstance.get('/missions');
+        console.log('Missions data:', response.data);
+        console.log('Sample mission employee:', response.data[0]?.employee);
         dispatch(fetchMissionsSuccess(response.data));
       } catch (error) {
         dispatch(fetchMissionsFailure(error.message));
@@ -381,7 +383,69 @@ const Missions = () => {
             </Box>
 
             <Paper>
-              <List>
+              <Box sx={{
+                p: 2,
+                borderBottom: 1,
+                borderColor: 'divider',
+                display: 'flex',
+                flexDirection: 'row-reverse',
+                alignItems: 'center',
+                gap: 2,
+                justifyContent: 'flex-end',
+                bgcolor: 'background.paper',
+                px: 3
+              }}>
+                <Box sx={{ width: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                  <Typography sx={{ visibility: 'hidden' }}>✓</Typography>
+                </Box>
+                <Box sx={{ width: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                  <Typography sx={{ visibility: 'hidden' }}>👤</Typography>
+                </Box>
+                <Typography sx={{
+                  minWidth: '80px',
+                  textAlign: 'left',
+                  fontWeight: 'bold',
+                  color: 'text.primary'
+                }}>
+                  الرمز
+                </Typography>
+                <Typography sx={{
+                  minWidth: '200px',
+                  textAlign: 'left',
+                  fontWeight: 'bold',
+                  color: 'text.primary'
+                }}>
+                  الاسم و اللقب
+                </Typography>
+                <Typography sx={{
+                  minWidth: '120px',
+                  textAlign: 'right',
+                  fontWeight: 'bold',
+                  color: 'text.primary'
+                }}>
+                  الوظيفة
+                </Typography>
+                <Typography sx={{
+                  minWidth: '80px',
+                  textAlign: 'right',
+                  fontWeight: 'bold',
+                  color: 'text.primary'
+                }}>
+                  الجنس
+                </Typography>
+                <Typography sx={{
+                  minWidth: '100px',
+                  textAlign: 'right',
+                  fontWeight: 'bold',
+                  color: 'text.primary'
+                }}>
+                  الهاتف
+                </Typography>
+                <Box sx={{ minWidth: '80px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                  <Typography sx={{ visibility: 'hidden' }}>الحالة</Typography>
+                </Box>
+              </Box>
+              <List sx={{ px: 3 }}>
                 {filteredEmployees.length > 0 ? (
                   filteredEmployees.map((employee, index) => (
                     <React.Fragment key={employee._id}>
@@ -390,36 +454,52 @@ const Missions = () => {
                           '&:hover': {
                             bgcolor: 'action.hover',
                           },
-                          flexDirection: 'row-reverse'
+                          flexDirection: 'row-reverse',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 2,
+                          justifyContent: 'flex-end'
                         }}
                       >
-                        <Checkbox
-                          edge="end"
-                          checked={selectedEmployees.some(emp => emp._id === employee._id)}
-                          onChange={() => handleEmployeeSelect(employee)}
-                        />
-                        <ListItemIcon sx={{ minWidth: 'auto', ml: 2 }}>
+                        <Box sx={{ width: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                          <Checkbox
+                            edge="end"
+                            checked={selectedEmployees.some(emp => emp._id === employee._id)}
+                            onChange={() => handleEmployeeSelect(employee)}
+                          />
+                        </Box>
+                        <ListItemIcon sx={{ minWidth: 'auto', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                           <PersonIcon color="primary" />
                         </ListItemIcon>
+                        <Typography sx={{ minWidth: '80px', textAlign: 'left' }}>
+                          {employee.matricule}
+                        </Typography>
                         <ListItemText
                           primary={`${employee.nom} ${employee.prenom}`}
-                          secondary={employee.centre || 'غير محدد'}
                           sx={{
-                            textAlign: 'right',
+                            textAlign: 'left',
+                            minWidth: '200px',
                             '& .MuiListItemText-primary': {
                               fontWeight: 'medium',
                             },
-                            '& .MuiListItemText-secondary': {
-                              color: 'text.secondary',
-                            },
                           }}
                         />
-                        <Chip
-                          label="نشط"
-                          color="success"
-                          size="small"
-                          sx={{ ml: 2 }}
-                        />
+                        <Typography sx={{ minWidth: '120px', textAlign: 'right' }}>
+                          {employee.poste || '-'}
+                        </Typography>
+                        <Typography sx={{ minWidth: '80px', textAlign: 'right' }}>
+                          {employee.sexe === 'M' ? 'ذكر' : 'أنثى'}
+                        </Typography>
+                        <Typography sx={{ minWidth: '100px', textAlign: 'right' }}>
+                          {employee.telephone || '-'}
+                        </Typography>
+                        <Box sx={{ minWidth: '80px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                          <Chip
+                            label="نشط"
+                            color="success"
+                            size="small"
+                          />
+                        </Box>
                       </ListItem>
                       {index < filteredEmployees.length - 1 && <Divider />}
                     </React.Fragment>
@@ -427,7 +507,7 @@ const Missions = () => {
                 ) : (
                   <ListItem>
                     <ListItemText 
-                      primary="لا يوجد موظفون نشطين في هذه الفئة" 
+                      primary="لا يوجد موظفون نشطين في هذه الفئة"
                       sx={{ textAlign: 'center' }}
                     />
                   </ListItem>
@@ -572,13 +652,13 @@ const Missions = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>رمز المهمة</TableCell>
-              <TableCell>الموظف</TableCell>
-              <TableCell>الوجهة</TableCell>
-              <TableCell>التاريخ</TableCell>
-              <TableCell>النوع</TableCell>
-              <TableCell>الحالة</TableCell>
-              <TableCell>الإجراءات</TableCell>
+              <TableCell align="right">رمز الموظف</TableCell>
+              <TableCell align="right">الاسم</TableCell>
+              <TableCell align="right">اللقب</TableCell>
+              <TableCell align="right">الوظيفة</TableCell>
+              <TableCell align="right">الجنس</TableCell>
+              <TableCell align="right">الهاتف</TableCell>
+              <TableCell align="right">الحالة</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -586,50 +666,25 @@ const Missions = () => {
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((mission) => (
                 <TableRow key={mission.code}>
-                  <TableCell>{mission.code}</TableCell>
-                  <TableCell>
-                    {`${mission.employee.firstName} ${mission.employee.lastName}`}
-                  </TableCell>
-                  <TableCell>{mission.destinations.join(', ')}</TableCell>
-                  <TableCell>
-                    {`${formatDate(mission.startDate)} - ${formatDate(mission.endDate)}`}
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={mission.type === 'monthly' ? 'شهرية' : 'خاصة'}
-                      color={missionTypeColors[mission.type]}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={
-                        mission.status === 'active'
-                          ? 'نشطة'
-                          : mission.status === 'completed'
-                          ? 'مكتملة'
-                          : 'ملغاة'
-                      }
-                      color={statusColors[mission.status]}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', gap: 0.5 }}>
-                      <IconButton
+                  <TableCell align="right">{mission.employee.code}</TableCell>
+                  <TableCell align="right">{mission.employee.nom}</TableCell>
+                  <TableCell align="right">{mission.employee.prenom}</TableCell>
+                  <TableCell align="right">{mission.employee.fonction}</TableCell>
+                  <TableCell align="right">{mission.employee.sexe === 'M' ? 'ذكر' : 'أنثى'}</TableCell>
+                  <TableCell align="right">{mission.employee.telephone || '-'}</TableCell>
+                  <TableCell align="right">
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <Chip
+                        label={
+                          mission.employee.status === 'active'
+                            ? 'نشط'
+                            : mission.employee.status === 'inactive'
+                            ? 'غير نشط'
+                            : mission.employee.status
+                        }
+                        color={mission.employee.status === 'active' ? 'success' : 'default'}
                         size="small"
-                        color="primary"
-                        onClick={() => handleOpenForm(mission)}
-                      >
-                        <EditIcon sx={{ fontSize: 20 }} />
-                      </IconButton>
-                      <IconButton
-                        size="small"
-                        color="error"
-                        onClick={() => handleDeleteClick(mission)}
-                      >
-                        <DeleteIcon sx={{ fontSize: 20 }} />
-                      </IconButton>
+                      />
                     </Box>
                   </TableCell>
                 </TableRow>
