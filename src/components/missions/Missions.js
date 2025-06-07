@@ -103,16 +103,12 @@ const Missions = () => {
     startDate: null,
     endDate: null,
   });
-  const [groupMissionData, setGroupMissionData] = useState({
-    destination: '',
-    dateDebut: null,
-    dateFin: null
-  });
   const [error, setError] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(null);
   const [selectedTransportMode, setSelectedTransportMode] = useState('');
   const [transportModeInput, setTransportModeInput] = useState('');
   const [formValid, setFormValid] = useState(false);
+  const [showValidationErrors, setShowValidationErrors] = useState(false);
   const [transportModes, setTransportModes] = useState([
     'سيارة الخدمة',
     'سيارة شخصية',
@@ -120,166 +116,16 @@ const Missions = () => {
     'شاحنة صهريج'
   ]);
 
-  // Fonction pour vérifier si une chaîne ne contient que des caractères arabes (incluant espaces)
-  const isArabicText = (text) => {
-    if (text === null || typeof text !== 'string') return false; 
-    if (text.trim() === '') return true; // Allow empty/whitespace for typing, validation handles required fields
-
-    const latinPattern = /[a-zA-Z]/; 
-    if (latinPattern.test(text)) {
-      console.log(`isArabicText: Caractères latins détectés dans "${text}"`);
-      return false;
-    }
-    
-    const nonArabicAndSpacePattern = /[^\u0600-\u06FF\s]/;
-    if (nonArabicAndSpacePattern.test(text)) {
-        console.log(`isArabicText: Caractères non arabes ou non-espaces détectés dans "${text}"`);
-        return false;
-    }
-    return true;
-  };
-
-  // Unified function to handle key down events for input fields (blocking Latin, committing on Enter)
-  const handleInputKeyDown = (event, inputState, setInputState, setSelectedState, isMultiple = false, optionsList = null) => {
-    // Prevent Latin character input
-    const latinPattern = /[a-zA-Z]/;
-    if (latinPattern.test(event.key)) {
-      event.preventDefault();
-      setError('يرجى استخدام الأحرف العربية فقط');
-      return;
-    }
-
-    // Handle Enter key for committing values
-    if (event.key === 'Enter') {
-      event.preventDefault(); // Prevent default form submission
-      const typedText = inputState.trim();
-
-      if (typedText !== '' && isArabicText(typedText)) {
-        if (isMultiple) {
-          setSelectedState(prev => {
-            if (!prev.includes(typedText)) {
-              return [...prev, typedText];
-            }
-            return prev;
-          });
-        } else {
-          setSelectedState(typedText);
-          if (optionsList && !optionsList.includes(typedText)) {
-            setTransportModes(prev => [...prev, typedText]); // Add to options if new transport mode
-          }
-        }
-        setInputState(''); // Clear input after adding
-        setError(null);
-      } else if (typedText !== '' && !isArabicText(typedText)) {
-        setError('يرجى استخدام الأحرف العربية فقط');
-      }
-    }
-  };
-
-  // Unified function to handle input text change (for controlled components)
-  const handleInputTextChange = (event, setInputState) => {
-    const typedText = event.target.value;
-    if (isArabicText(typedText)) {
-      setInputState(typedText); // Only update state if text is Arabic
-      setError(null);
-    } else {
-      setError('يرجى استخدام الأحرف العربية فقط');
-    }
-  };
-
-  // Unified function to handle paste for validation and setting input state
-  const handleInputPaste = (e, setInputState) => {
-    e.preventDefault();
-    const pastedText = e.clipboardData.getData('text');
-    if (isArabicText(pastedText)) {
-      setInputState(pastedText); // Set input value
-      setError(null);
-    } else {
-      setError('يرجى استخدام الأحرف العربية فقط');
-    }
-  };
-
-  // Unified function to handle blur for committing values
-  const handleInputBlur = (inputState, setInputState, setSelectedState, isMultiple = false, optionsList = null) => {
-    const typedText = inputState.trim();
-    if (typedText !== '' && isArabicText(typedText)) {
-      if (isMultiple) {
-        setSelectedState(prev => {
-          if (!prev.includes(typedText)) {
-            return [...prev, typedText];
-          }
-          return prev;
-        });
-      } else {
-        setSelectedState(typedText);
-        if (optionsList && !optionsList.includes(typedText)) {
-          setTransportModes(prev => [...prev, typedText]);
-        }
-      }
-      setInputState('');
-      setError(null);
-    } else if (typedText !== '' && !isArabicText(typedText)) {
-      setError('يرجى استخدام الأحرف العربية فقط');
-    }
-  };
-
-  // Fonction pour valider et mettre à jour les destinations (gère les chips sélectionnées)
-  const handleDestinationChange = (event, newValue) => {
-    console.log('handleDestinationChange (chips) - newValue:', newValue);
-    const validNewValue = newValue.filter(item => item && item.trim() !== '' && isArabicText(item));
-    setSelectedDestinations(validNewValue);
-    setError(null);
-  };
-
-  // Fonction pour valider et mettre à jour le moyen de transport (gère la valeur sélectionnée)
-  const handleTransportModeChange = (event, newValue) => {
-    console.log('handleTransportModeChange (value) - newValue:', newValue);
-    if (newValue === null || newValue.trim() === '') {
-      setSelectedTransportMode('');
-      setError(null);
-      return;
-    }
-    if (!isArabicText(newValue)) {
-      setError('يرجى استخدام الأحرف العربية فقط في وسيلة النقل');
-      return;
-    }
-    if (!transportModes.includes(newValue)) {
-      setTransportModes(prev => [...prev, newValue]);
-    }
-    setSelectedTransportMode(newValue);
-    setError(null);
-  };
-
-  // useEffect pour la validation du formulaire
-  useEffect(() => {
-    const isValid = Boolean(
-      selectedMonth && 
-      selectedEmployees.length > 0 && 
-      selectedTransportMode && 
-      selectedDestinations.length > 0
-    );
-    console.log('Validation du formulaire:', {
-      selectedMonth: Boolean(selectedMonth),
-      hasEmployees: selectedEmployees.length > 0,
-      hasTransport: Boolean(selectedTransportMode),
-      hasDestinations: selectedDestinations.length > 0,
-      isValid
-    });
-    setFormValid(isValid);
-  }, [selectedMonth, selectedEmployees, selectedTransportMode, selectedDestinations]);
-
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
         setLoading(true);
         const response = await axiosInstance.get('/employees');
-        console.log('Raw employees data:', response.data);
         
         if (Array.isArray(response.data)) {
           const activeEmployees = response.data.filter(emp => 
             emp.status === 'active' || emp.status === 'نشط' || emp.status === 'Active'
           );
-          console.log('Active employees:', activeEmployees);
           setEmployees(activeEmployees);
           
           const centresList = activeEmployees
@@ -288,13 +134,10 @@ const Missions = () => {
             .sort((a, b) => a.localeCompare(b));
           
           const uniqueCentres = [...new Set(centresList)];
-          console.log('Unique centres:', uniqueCentres);
           setCentres(uniqueCentres);
-        } else {
-          console.error('Invalid employees data format:', response.data);
         }
       } catch (error) {
-        console.error('Error fetching employees:', error);
+        setError('Erreur lors de la récupération des employés');
       } finally {
         setLoading(false);
       }
@@ -308,8 +151,6 @@ const Missions = () => {
       try {
         dispatch(fetchMissionsStart());
         const response = await axiosInstance.get('/missions');
-        console.log('Missions data:', response.data);
-        console.log('Sample mission employee:', response.data[0]?.employee);
         dispatch(fetchMissionsSuccess(response.data));
       } catch (error) {
         dispatch(fetchMissionsFailure(error.message));
@@ -318,6 +159,21 @@ const Missions = () => {
 
     fetchMissions();
   }, [dispatch]);
+
+  const filteredEmployees = useMemo(() => {
+    return employees.filter(employee => {
+      const matchesCentre = selectedCentre === 'all' || employee.centre === selectedCentre;
+      const searchTermLower = searchTerm.toLowerCase();
+      const matchesSearch = !searchTerm || 
+        employee.nom?.toLowerCase().includes(searchTermLower) ||
+        employee.prenom?.toLowerCase().includes(searchTermLower) ||
+        employee.matricule?.toLowerCase().includes(searchTermLower) ||
+        employee.poste?.toLowerCase().includes(searchTermLower) ||
+        employee.code?.toLowerCase().includes(searchTermLower);
+      
+      return matchesCentre && matchesSearch;
+    });
+  }, [employees, selectedCentre, searchTerm]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -380,37 +236,6 @@ const Missions = () => {
     dispatch(fetchMissionsSuccess(response.data));
   };
 
-  const filteredEmployees = useMemo(() => {
-    console.log('Filtering employees:', {
-      total: employees.length,
-      selectedCentre,
-      searchTerm
-    });
-    
-    return employees.filter(employee => {
-      const matchesCentre = selectedCentre === 'all' || employee.centre === selectedCentre;
-      const searchTermLower = searchTerm.toLowerCase();
-      const matchesSearch = !searchTerm || 
-        employee.nom?.toLowerCase().includes(searchTermLower) ||
-        employee.prenom?.toLowerCase().includes(searchTermLower) ||
-        employee.matricule?.toLowerCase().includes(searchTermLower) ||
-        employee.poste?.toLowerCase().includes(searchTermLower) ||
-        employee.code?.toLowerCase().includes(searchTermLower);
-      
-      console.log('Employee filter check:', {
-        matricule: employee.matricule,
-        code: employee.code,
-        centre: employee.centre,
-        poste: employee.poste,
-        selectedCentre,
-        matchesCentre,
-        matchesSearch
-      });
-      
-      return matchesCentre && matchesSearch;
-    });
-  }, [employees, selectedCentre, searchTerm]);
-
   const handleEmployeeSelect = (employee) => {
     setSelectedEmployees(prev => {
       const isSelected = prev.some(emp => emp._id === employee._id);
@@ -449,7 +274,6 @@ const Missions = () => {
   };
 
   const handleMonthChange = (date) => {
-    console.log('handleMonthChange appelé avec:', date);
     if (date) {
       const { start, end } = getMonthStartAndEnd(date);
       setSelectedMonth(date);
@@ -457,122 +281,124 @@ const Missions = () => {
         startDate: start,
         endDate: end
       });
-      console.log('selectedMonth et missionDates mis à jour:', { date, start, end });
     } else {
-        setSelectedMonth(null);
-        setMissionDates({ startDate: null, endDate: null });
+      setSelectedMonth(null);
+      setMissionDates({ startDate: null, endDate: null });
     }
   };
 
-  // Fonction pour générer un code unique de mission au format NNNNN/YYYY
+  // Fonction pour générer un code de mission séquentiel
   const generateMissionCode = (sequenceNumber, missionYear) => {
     const paddedSequence = String(sequenceNumber).padStart(5, '0');
     return `${paddedSequence}/${missionYear}`;
   };
 
   const handleCreateGroupMission = async () => {
+    setShowValidationErrors(true);
     try {
       if (!formValid) {
-        console.log('Validation du formulaire échouée:', {
-          selectedMonth,
-          selectedEmployees: selectedEmployees.length,
-          selectedTransportMode,
-          selectedDestinations: selectedDestinations.length
-        });
         setError('يرجى ملء جميع الحقول المطلوبة');
         return;
       }
 
-      // Validation supplémentaire des dates
       if (!missionDates.startDate || !missionDates.endDate) {
-        console.error('Dates manquantes:', missionDates);
         setError('يرجى تحديد شهر المهمة');
         return;
       }
 
-      // Validation des employés
       if (selectedEmployees.length === 0) {
-        console.error('Aucun employé sélectionné');
         setError('يرجى تحديد موظف واحد على الأقل');
         return;
       }
 
-      // Validation des destinations
       if (selectedDestinations.length === 0) {
-        console.error('Aucune destination sélectionnée');
         setError('يرجى تحديد وجهة واحدة على الأقل');
         return;
       }
 
-      // Validation du mode de transport
       if (!selectedTransportMode || selectedTransportMode.trim() === '') {
-        console.error('Mode de transport manquant');
         setError('يرجى تحديد وسيلة النقل');
         return;
       }
 
-      // Création des missions individuelles pour chaque employé
+      // Trouver le dernier numéro de mission pour cette année
+      const missionYear = missionDates.startDate.getFullYear();
+      const lastMission = await axiosInstance.get('/missions', {
+        params: {
+          year: missionYear,
+          sort: '-code',
+          limit: 1
+        }
+      });
+
+      let lastNumber = 0;
+      if (lastMission.data && lastMission.data.length > 0) {
+        const lastCode = lastMission.data[0].code;
+        const match = lastCode.match(/^(\d+)\/\d+$/);
+        if (match) {
+          lastNumber = parseInt(match[1], 10);
+        }
+      }
+
       const missionsToCreate = selectedEmployees.map((employee, index) => {
         if (!employee._id || !employee.matricule) {
           throw new Error(`Données employé incomplètes: ${employee.nom} ${employee.prenom}`);
         }
 
-        // Extraction de l'année de la mission
-        const missionYear = missionDates.startDate.getFullYear();
-        // Génération d'un code unique pour chaque mission selon le format désiré
-        const missionCode = generateMissionCode(index + 1, missionYear);
-        console.log('Code de mission généré:', missionCode);
+        const sequenceNumber = lastNumber + index + 1;
+        const missionCode = generateMissionCode(sequenceNumber, missionYear);
 
-        return {
+        const missionData = {
           code: missionCode,
           type: 'monthly',
           status: 'active',
-          destination: selectedDestinations[0],
+          employee: employee._id,
+          destination: selectedDestinations.join(', '),
           startDate: missionDates.startDate.toISOString(),
           endDate: missionDates.endDate.toISOString(),
-          employee: employee._id,
           transportMode: selectedTransportMode.trim(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
         };
+
+        console.log('Données de mission à créer:', {
+          code: missionData.code,
+          employeeId: missionData.employee,
+          employeeInfo: {
+            matricule: employee.matricule,
+            nom: employee.nom,
+            prenom: employee.prenom,
+            centre: employee.centre,
+            fonction: employee.poste
+          },
+          destination: missionData.destination,
+          dates: {
+            start: formatGregorianDate(missionData.startDate),
+            end: formatGregorianDate(missionData.endDate)
+          },
+          transportMode: missionData.transportMode
+        });
+
+        return missionData;
       });
 
-      console.log('Missions à créer:', missionsToCreate.map(mission => ({
-        code: mission.code,
-        employee: mission.employee,
-        destination: mission.destination,
-        dates: {
-          start: formatGregorianDate(mission.startDate),
-          end: formatGregorianDate(mission.endDate)
-        },
-        transportMode: mission.transportMode
-      })));
-
       try {
-        // Création des missions une par une avec gestion des erreurs individuelles
-        const results = await Promise.allSettled(
-          missionsToCreate.map(missionData => 
-            axiosInstance.post('/missions', missionData)
-          )
-        );
-
-        // Vérification des résultats
-        const errors = results.filter(result => result.status === 'rejected');
-        const successes = results.filter(result => result.status === 'fulfilled');
-
-        if (errors.length > 0) {
-          console.error('Erreurs lors de la création des missions:', errors);
-          const errorMessages = errors.map(error => {
-            if (error.reason?.response?.data?.message) {
-              return error.reason.response.data.message;
-            }
-            return error.reason?.message || 'Erreur inconnue';
-          });
-          setError(`Erreurs lors de la création de ${errors.length} mission(s):\n${errorMessages.join('\n')}`);
+        // Créer les missions une par une pour éviter les conflits
+        const createdMissions = [];
+        for (const missionData of missionsToCreate) {
+          try {
+            const response = await axiosInstance.post('/missions', missionData);
+            createdMissions.push(response.data);
+          } catch (error) {
+            console.error('Erreur lors de la création de la mission:', {
+              missionData,
+              error: error.response?.data || error.message
+            });
+            throw error;
+          }
         }
 
-        if (successes.length > 0) {
-          console.log('Missions créées avec succès:', successes.map(res => res.value.data));
-          
-          // Réinitialisation du formulaire
+        if (createdMissions.length > 0) {
           setGroupMissionDialogOpen(false);
           setSelectedEmployees([]);
           setSelectedDestinations([]);
@@ -583,24 +409,13 @@ const Missions = () => {
           setMissionDates({ startDate: null, endDate: null });
           setError(null);
           setFormValid(false);
+          setShowValidationErrors(false);
           
-          // Rafraîchir la liste des missions
           dispatch(fetchMissionsStart());
           const missionsResponse = await axiosInstance.get('/missions');
           dispatch(fetchMissionsSuccess(missionsResponse.data));
         }
       } catch (error) {
-        console.error('Erreur détaillée lors de la création de la mission:', {
-          message: error.message,
-          response: error.response?.data,
-          status: error.response?.status,
-          config: {
-            url: error.config?.url,
-            method: error.config?.method,
-            data: JSON.parse(error.config?.data || '{}')
-          }
-        });
-
         let errorMessage = 'Une erreur est survenue lors de la création de la mission';
         
         if (error.response?.data?.message) {
@@ -614,10 +429,6 @@ const Missions = () => {
           } else {
             errorMessage = 'البيانات المدخلة غير صحيحة';
           }
-        } else if (error.response?.status === 401) {
-          errorMessage = 'غير مصرح لك بإنشاء المهام';
-        } else if (error.response?.status === 500) {
-          errorMessage = 'خطأ في الخادم، يرجى المحاولة مرة أخرى لاحقاً';
         }
         
         setError(errorMessage);
@@ -628,15 +439,161 @@ const Missions = () => {
     }
   };
 
+  // Fonction pour vérifier si une chaîne ne contient que des caractères arabes
+  const isArabicText = (text) => {
+    if (text === null || typeof text !== 'string') return false;
+    if (text.trim() === '') return true;
+    const latinPattern = /[a-zA-Z]/;
+    if (latinPattern.test(text)) return false;
+    const nonArabicAndSpacePattern = /[^\u0600-\u06FF\s]/;
+    return !nonArabicAndSpacePattern.test(text);
+  };
+
+  // Fonction pour gérer les événements clavier
+  const handleInputKeyDown = (event, inputState, setInputState, setSelectedState, isMultiple = false, optionsList = null) => {
+    // Gérer la touche Backspace
+    if (event.key === 'Backspace' && inputState === '') {
+      if (isMultiple) {
+        // Pour les destinations multiples
+        setSelectedState(prev => {
+          const newState = [...prev];
+          newState.pop();
+          return newState;
+        });
+      } else {
+        // Pour le moyen de transport
+        setSelectedState('');
+      }
+      return;
+    }
+
+    const latinPattern = /[a-zA-Z]/;
+    if (latinPattern.test(event.key)) {
+      event.preventDefault();
+      setError('يرجى استخدام الأحرف العربية فقط');
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      const typedText = inputState.trim();
+
+      if (typedText !== '' && isArabicText(typedText)) {
+        if (isMultiple) {
+          setSelectedState(prev => {
+            if (!prev.includes(typedText)) {
+              return [...prev, typedText];
+            }
+            return prev;
+          });
+        } else {
+          setSelectedState(typedText);
+          if (optionsList && !optionsList.includes(typedText)) {
+            setTransportModes(prev => [...prev, typedText]);
+          }
+        }
+        setInputState('');
+        setError(null);
+      } else if (typedText !== '' && !isArabicText(typedText)) {
+        setError('يرجى استخدام الأحرف العربية فقط');
+      }
+    }
+  };
+
+  // Fonction pour gérer les changements de texte
+  const handleInputTextChange = (event, setInputState) => {
+    const typedText = event.target.value;
+    if (isArabicText(typedText)) {
+      setInputState(typedText);
+      setError(null);
+    } else {
+      setError('يرجى استخدام الأحرف العربية فقط');
+    }
+  };
+
+  // Fonction pour gérer le collage de texte
+  const handleInputPaste = (e, setInputState) => {
+    e.preventDefault();
+    const pastedText = e.clipboardData.getData('text');
+    if (isArabicText(pastedText)) {
+      setInputState(pastedText);
+      setError(null);
+    } else {
+      setError('يرجى استخدام الأحرف العربية فقط');
+    }
+  };
+
+  // Fonction pour gérer la perte de focus
+  const handleInputBlur = (inputState, setInputState, setSelectedState, isMultiple = false, optionsList = null) => {
+    const typedText = inputState.trim();
+    if (typedText !== '' && isArabicText(typedText)) {
+      if (isMultiple) {
+        setSelectedState(prev => {
+          if (!prev.includes(typedText)) {
+            return [...prev, typedText];
+          }
+          return prev;
+        });
+      } else {
+        setSelectedState(typedText);
+        if (optionsList && !optionsList.includes(typedText)) {
+          setTransportModes(prev => [...prev, typedText]);
+        }
+      }
+      setInputState('');
+      setError(null);
+    } else if (typedText !== '' && !isArabicText(typedText)) {
+      setError('يرجى استخدام الأحرف العربية فقط');
+    }
+  };
+
+  // Fonction pour gérer les changements de destination
+  const handleDestinationChange = (event, newValue) => {
+    const validNewValue = newValue.filter(item => item && item.trim() !== '' && isArabicText(item));
+    setSelectedDestinations(validNewValue);
+    setError(null);
+  };
+
+  // Fonction pour gérer les changements de mode de transport
+  const handleTransportModeChange = (event, newValue) => {
+    if (newValue === null || newValue.trim() === '') {
+      setSelectedTransportMode('');
+      setError(null);
+      return;
+    }
+    if (!isArabicText(newValue)) {
+      setError('يرجى استخدام الأحرف العربية فقط في وسيلة النقل');
+      return;
+    }
+    if (!transportModes.includes(newValue)) {
+      setTransportModes(prev => [...prev, newValue]);
+    }
+    setSelectedTransportMode(newValue.trim());
+    setError(null);
+  };
+
+  // Modification de la logique de validation
+  useEffect(() => {
+    const validationState = {
+      selectedMonth: Boolean(selectedMonth),
+      hasEmployees: selectedEmployees.length > 0,
+      hasTransport: Boolean(selectedTransportMode && selectedTransportMode.trim() !== ''),
+      hasDestinations: selectedDestinations.length > 0,
+      hasStartDate: Boolean(missionDates.startDate),
+      hasEndDate: Boolean(missionDates.endDate)
+    };
+
+    setFormValid(Object.values(validationState).every(Boolean));
+  }, [
+    selectedMonth,
+    selectedEmployees,
+    selectedTransportMode,
+    selectedDestinations,
+    missionDates.startDate,
+    missionDates.endDate
+  ]);
+
   const renderEmployeesList = () => {
-    console.log('Rendering employees list:', {
-      loading,
-      totalEmployees: employees.length,
-      filteredEmployees: filteredEmployees.length,
-      selectedCentre,
-      searchTerm
-    });
-    
     return (
       <>
         <Paper sx={{ mb: 2, p: 2 }}>
@@ -652,7 +609,6 @@ const Missions = () => {
               <Select
                 value={selectedCentre}
                 onChange={(e) => {
-                  console.log('Selected centre changed:', e.target.value);
                   setSelectedCentre(e.target.value);
                 }}
                 label="المركز"
@@ -913,7 +869,6 @@ const Missions = () => {
                   <Select
                     value={selectedCentre}
                     onChange={(e) => {
-                      console.log('Selected centre changed:', e.target.value);
                       setSelectedCentre(e.target.value);
                     }}
                     label="المركز"
@@ -1089,7 +1044,12 @@ const Missions = () => {
               <TableCell align="right" sx={{ fontWeight: 'bold' }}>اللقب</TableCell>
               <TableCell align="right" sx={{ fontWeight: 'bold' }}>الاسم</TableCell>
               <TableCell align="right" sx={{ fontWeight: 'bold' }}>رمز الموظف</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold' }}>المهمة</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 'bold' }}>رمز المهمة</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 'bold' }}>الوجهة</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 'bold' }}>تاريخ البدء</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 'bold' }}>تاريخ الانتهاء</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 'bold' }}>وسيلة النقل</TableCell>
+              <TableCell align="right" sx={{ fontWeight: 'bold' }}>النوع</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -1104,7 +1064,12 @@ const Missions = () => {
                   <TableCell align="right">{mission.employee.prenom}</TableCell>
                   <TableCell align="right">{mission.employee.nom}</TableCell>
                   <TableCell align="right">{mission.employee.code}</TableCell>
-                  <TableCell align="right">{formatMissionDates(mission)}</TableCell>
+                  <TableCell align="right">{mission.code}</TableCell>
+                  <TableCell align="right">{mission.destination}</TableCell>
+                  <TableCell align="right">{formatGregorianDate(mission.startDate)}</TableCell>
+                  <TableCell align="right">{formatGregorianDate(mission.endDate)}</TableCell>
+                  <TableCell align="right">{mission.transportMode}</TableCell>
+                  <TableCell align="right">{mission.type === 'monthly' ? 'شهرية' : 'خاصة'}</TableCell>
                 </TableRow>
               ))}
           </TableBody>
@@ -1142,13 +1107,14 @@ const Missions = () => {
           setGroupMissionDialogOpen(false);
           setSelectedEmployees([]);
           setSelectedDestinations([]);
-          setDestinationInput(''); // Reset input states
+          setDestinationInput('');
           setSelectedTransportMode('');
-          setTransportModeInput(''); // Reset input states
+          setTransportModeInput('');
           setSelectedMonth(null);
           setMissionDates({ startDate: null, endDate: null });
           setError(null);
           setFormValid(false);
+          setShowValidationErrors(false);
         }}
         maxWidth="md"
         fullWidth
@@ -1159,8 +1125,8 @@ const Missions = () => {
             عدد الموظفين المحددين: {selectedEmployees.length}
           </Typography>
         </DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
+        <DialogContent sx={{ p: 3 }}>
+          <Grid container spacing={3}>
             <Grid item xs={12}>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <DatePicker
@@ -1169,12 +1135,13 @@ const Missions = () => {
                   onChange={handleMonthChange}
                   views={['month', 'year']}
                   openTo="month"
-                  renderInput={(params) => (
-                    <TextField 
-                      {...params} 
-                      fullWidth 
-                    />
-                  )}
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      required: true,
+                      helperText: showValidationErrors && !selectedMonth ? 'يرجى تحديد شهر المهمة' : ''
+                    }
+                  }}
                 />
               </LocalizationProvider>
             </Grid>
@@ -1184,7 +1151,7 @@ const Missions = () => {
                 options={[]}
                 freeSolo
                 value={selectedDestinations}
-                onChange={handleDestinationChange} // This handles changes to the selected chips
+                onChange={handleDestinationChange}
                 renderTags={(value, getTagProps) =>
                   value.map((option, index) => (
                     <Chip
@@ -1200,13 +1167,14 @@ const Missions = () => {
                     label="الوجهات"
                     placeholder="أضف وجهة"
                     required
-                    value={destinationInput} // Controlled input
-                    onChange={(e) => handleInputTextChange(e, setDestinationInput)} // Update input state and validate
-                    onKeyDown={(e) => handleInputKeyDown(e, destinationInput, setDestinationInput, setSelectedDestinations, true)} // Handle Enter and Latin keys
-                    onBlur={() => handleInputBlur(destinationInput, setDestinationInput, setSelectedDestinations, true)} // Commit on blur
+                    helperText={showValidationErrors && selectedDestinations.length === 0 ? 'يرجى تحديد وجهة واحدة على الأقل' : ''}
+                    value={destinationInput}
+                    onChange={(e) => handleInputTextChange(e, setDestinationInput)}
+                    onKeyDown={(e) => handleInputKeyDown(e, destinationInput, setDestinationInput, setSelectedDestinations, true)}
+                    onBlur={() => handleInputBlur(destinationInput, setDestinationInput, setSelectedDestinations, true)}
                     inputProps={{
                       ...params.inputProps,
-                      onPaste: (e) => handleInputPaste(e, setDestinationInput), // Handle paste
+                      onPaste: (e) => handleInputPaste(e, setDestinationInput),
                     }}
                   />
                 )}
@@ -1217,20 +1185,21 @@ const Missions = () => {
                 freeSolo
                 options={transportModes}
                 value={selectedTransportMode}
-                onChange={handleTransportModeChange} // This handles selection from options or pressing Enter
+                onChange={handleTransportModeChange}
                 renderInput={(params) => (
                   <TextField
                     {...params}
                     label="وسيلة النقل"
                     required
+                    helperText={showValidationErrors && (!selectedTransportMode || selectedTransportMode.trim() === '') ? 'يرجى تحديد وسيلة النقل' : ''}
                     placeholder="أضف وسيلة نقل"
-                    value={transportModeInput} // Controlled input
-                    onChange={(e) => handleInputTextChange(e, setTransportModeInput)} // Update input state and validate
-                    onKeyDown={(e) => handleInputKeyDown(e, transportModeInput, setTransportModeInput, setSelectedTransportMode, false, transportModes)} // Handle Enter and Latin keys
-                    onBlur={() => handleInputBlur(transportModeInput, setTransportModeInput, setSelectedTransportMode, false, transportModes)} // Commit on blur
+                    value={transportModeInput}
+                    onChange={(e) => handleInputTextChange(e, setTransportModeInput)}
+                    onKeyDown={(e) => handleInputKeyDown(e, transportModeInput, setTransportModeInput, setSelectedTransportMode, false, transportModes)}
+                    onBlur={() => handleInputBlur(transportModeInput, setTransportModeInput, setSelectedTransportMode, false, transportModes)}
                     inputProps={{
                       ...params.inputProps,
-                      onPaste: (e) => handleInputPaste(e, setTransportModeInput), // Handle paste
+                      onPaste: (e) => handleInputPaste(e, setTransportModeInput),
                     }}
                   />
                 )}
@@ -1249,12 +1218,6 @@ const Missions = () => {
             variant="contained"
             color="primary"
             disabled={!formValid}
-            sx={{ 
-              '&.Mui-disabled': {
-                backgroundColor: 'rgba(0, 0, 0, 0.12)',
-                color: 'rgba(0, 0, 0, 0.26)'
-              }
-            }}
           >
             إنشاء المهمة
           </Button>
@@ -1263,13 +1226,14 @@ const Missions = () => {
               setGroupMissionDialogOpen(false);
               setSelectedEmployees([]);
               setSelectedDestinations([]);
-              setDestinationInput(''); // Reset input states
+              setDestinationInput('');
               setSelectedTransportMode('');
-              setTransportModeInput(''); // Reset input states
+              setTransportModeInput('');
               setSelectedMonth(null);
               setMissionDates({ startDate: null, endDate: null });
               setError(null);
               setFormValid(false);
+              setShowValidationErrors(false);
             }}
             variant="outlined"
             color="error"
