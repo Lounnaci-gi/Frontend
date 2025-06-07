@@ -15,10 +15,18 @@ import {
   Autocomplete,
   Grid,
 } from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { format } from 'date-fns';
+import { ar } from 'date-fns/locale';
 import axiosInstance from '../../config/axios';
+
+// Fonction utilitaire pour formater les dates en grégorien
+const formatGregorianDate = (date) => {
+  if (!date) return '';
+  return format(new Date(date), 'dd/MM/yyyy', { locale: ar });
+};
 
 const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -27,6 +35,7 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
     destinations: [],
     startDate: null,
     endDate: null,
+    selectedMonth: null,
     type: 'monthly',
     status: 'active',
     description: '',
@@ -43,19 +52,15 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
     return { start, end };
   };
 
-  // Gestionnaire de changement de date pour les missions mensuelles
-  const handleDateChange = (date) => {
-    if (formData.type === 'monthly' && date) {
+  // Gestionnaire de changement de mois pour les missions mensuelles
+  const handleMonthChange = (date) => {
+    if (date) {
       const { start, end } = getMonthStartAndEnd(date);
       setFormData(prev => ({
         ...prev,
+        selectedMonth: date,
         startDate: start,
         endDate: end
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        startDate: date
       }));
     }
   };
@@ -64,8 +69,8 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
   const handleTypeChange = (event) => {
     const newType = event.target.value;
     setFormData(prev => {
-      if (newType === 'monthly' && prev.startDate) {
-        const { start, end } = getMonthStartAndEnd(prev.startDate);
+      if (newType === 'monthly' && prev.selectedMonth) {
+        const { start, end } = getMonthStartAndEnd(prev.selectedMonth);
         return {
           ...prev,
           type: newType,
@@ -75,7 +80,10 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
       }
       return {
         ...prev,
-        type: newType
+        type: newType,
+        selectedMonth: null,
+        startDate: null,
+        endDate: null
       };
     });
   };
@@ -99,12 +107,13 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
           destinations: mission.destinations || [],
           startDate: new Date(mission.startDate) || null,
           endDate: new Date(mission.endDate) || null,
+          selectedMonth: new Date(mission.startDate) || null,
           type: mission.type || 'monthly',
           status: mission.status || 'active',
           description: mission.description || '',
         });
       } else {
-        // Pour une nouvelle mission mensuelle, définir la date de début au premier jour du mois courant
+        // Pour une nouvelle mission mensuelle, définir le mois courant
         const today = new Date();
         const { start, end } = getMonthStartAndEnd(today);
         setFormData({
@@ -113,6 +122,7 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
           destinations: [],
           startDate: start,
           endDate: end,
+          selectedMonth: today,
           type: 'monthly',
           status: 'active',
           description: '',
@@ -128,20 +138,31 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
     });
   };
 
+  // Gestionnaire de soumission du formulaire
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
     try {
+      const missionData = {
+        ...formData,
+        startDate: formData.startDate.toISOString(),
+        endDate: formData.endDate.toISOString(),
+        type: formData.type || 'monthly',
+        status: formData.status || 'active'
+      };
+
       if (mission) {
-        await axiosInstance.put(`/missions/${mission._id}`, formData);
+        await axiosInstance.put(`/missions/${mission._id}`, missionData);
       } else {
-        await axiosInstance.post('/missions', formData);
+        await axiosInstance.post('/missions', missionData);
       }
+
       onSuccess();
       handleClose();
     } catch (error) {
+      console.error('Erreur lors de la sauvegarde de la mission:', error);
       setError(error.response?.data?.message || 'Une erreur est survenue');
     } finally {
       setLoading(false);
@@ -151,10 +172,10 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
       <DialogTitle>
-        {mission ? 'تعديل المهمة' : 'إضافة مهمة جديدة'}
+        {mission ? 'تعديل المهمة' : 'إنشاء مهمة جديدة'}
       </DialogTitle>
-      <form onSubmit={handleSubmit}>
-        <DialogContent>
+      <DialogContent>
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
           <Grid container spacing={2}>
             <Grid item xs={12} sm={6}>
               <TextField
@@ -215,39 +236,72 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
               />
             </Grid>
             <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
+              <FormControl fullWidth margin="normal">
                 <InputLabel>نوع المهمة</InputLabel>
                 <Select
                   value={formData.type}
                   onChange={handleTypeChange}
-                  label="نوع المهمة"
+                  required
                 >
                   <MenuItem value="monthly">مهمة شهرية</MenuItem>
                   <MenuItem value="special">مهمة خاصة</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  label="تاريخ البداية"
-                  value={formData.startDate}
-                  onChange={handleDateChange}
-                  renderInput={(params) => <TextField {...params} fullWidth />}
-                />
-              </LocalizationProvider>
-            </Grid>
-            {formData.type === 'special' && (
+            {formData.type === 'monthly' ? (
               <Grid item xs={12} sm={6}>
-                <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ar}>
                   <DatePicker
-                    label="تاريخ النهاية"
-                    value={formData.endDate}
-                    onChange={(date) => setFormData(prev => ({ ...prev, endDate: date }))}
-                    renderInput={(params) => <TextField {...params} fullWidth />}
+                    label="شهر المهمة"
+                    value={formData.selectedMonth}
+                    onChange={handleMonthChange}
+                    views={['month', 'year']}
+                    openTo="month"
+                    format="MM/yyyy"
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                        helperText: formData.selectedMonth ? 
+                          `من ${formatGregorianDate(formData.startDate)} إلى ${formatGregorianDate(formData.endDate)}` : 
+                          ''
+                      }
+                    }}
                   />
                 </LocalizationProvider>
               </Grid>
+            ) : (
+              <>
+                <Grid item xs={12} sm={6}>
+                  <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ar}>
+                    <DatePicker
+                      label="تاريخ البداية"
+                      value={formData.startDate}
+                      onChange={(date) => setFormData(prev => ({ ...prev, startDate: date }))}
+                      format="dd/MM/yyyy"
+                      slotProps={{
+                        textField: {
+                          fullWidth: true
+                        }
+                      }}
+                    />
+                  </LocalizationProvider>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ar}>
+                    <DatePicker
+                      label="تاريخ النهاية"
+                      value={formData.endDate}
+                      onChange={(date) => setFormData(prev => ({ ...prev, endDate: date }))}
+                      format="dd/MM/yyyy"
+                      slotProps={{
+                        textField: {
+                          fullWidth: true
+                        }
+                      }}
+                    />
+                  </LocalizationProvider>
+                </Grid>
+              </>
             )}
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth margin="normal">
@@ -280,19 +334,19 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
               {error}
             </Box>
           )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose}>إلغاء</Button>
-          <Button
-            type="submit"
-            variant="contained"
-            color="primary"
-            disabled={loading}
-          >
-            {loading ? 'جاري الحفظ...' : mission ? 'تحديث' : 'حفظ'}
-          </Button>
-        </DialogActions>
-      </form>
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleClose}>إلغاء</Button>
+        <Button
+          type="submit"
+          variant="contained"
+          color="primary"
+          disabled={loading}
+        >
+          {loading ? 'جاري الحفظ...' : mission ? 'تحديث' : 'حفظ'}
+        </Button>
+      </DialogActions>
     </Dialog>
   );
 };
