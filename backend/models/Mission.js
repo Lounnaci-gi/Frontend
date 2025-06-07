@@ -1,11 +1,48 @@
 const mongoose = require('mongoose');
 
-// Fonction pour générer un code unique
-const generateUniqueCode = async () => {
+// Fonction pour générer un code de mission unique
+const generateMissionCode = async () => {
   const date = new Date();
   const year = date.getFullYear();
   
   // Trouver le dernier code pour cette année
+  const lastMission = await mongoose.model('Mission').findOne(
+    { code_mission: new RegExp(`^\\d{5}/${year}$`) },
+    { code_mission: 1 },
+    { sort: { code_mission: -1 } }
+  );
+
+  let sequence;
+  if (lastMission) {
+    // Extraire le numéro de séquence du dernier code
+    const match = lastMission.code_mission.match(/^(\d{5})\/\d{4}$/);
+    if (match) {
+      sequence = parseInt(match[1], 10) + 1;
+    } else {
+      sequence = 1;
+    }
+  } else {
+    sequence = 1;
+  }
+
+  // Formater le nouveau code
+  const newCode = `${String(sequence).padStart(5, '0')}/${year}`;
+  
+  // Vérifier si le code existe déjà (au cas où)
+  const existingMission = await mongoose.model('Mission').findOne({ code_mission: newCode });
+  if (existingMission) {
+    throw new Error(`Le code de mission ${newCode} existe déjà. Veuillez réessayer.`);
+  }
+
+  return newCode;
+};
+
+// Fonction pour générer l'ancien format de code
+const generateLegacyCode = async () => {
+  const prefix = 'M';
+  const date = new Date();
+  const year = date.getFullYear();
+  
   const lastMission = await mongoose.model('Mission').findOne(
     { code: new RegExp(`^\\d{5}/${year}$`) },
     { code: 1 },
@@ -21,9 +58,14 @@ const generateUniqueCode = async () => {
 };
 
 const missionSchema = new mongoose.Schema({
-  code: {
+  code_mission: {
     type: String,
     required: true,
+    unique: true
+  },
+  code: {
+    type: String,
+    required: false, // Rendu optionnel
     unique: true
   },
   type: {
@@ -46,6 +88,10 @@ const missionSchema = new mongoose.Schema({
     ref: 'Location',
     required: true
   }],
+  transportMode: {
+    type: String,
+    required: true
+  },
   startDate: {
     type: Date,
     required: true
@@ -70,11 +116,37 @@ const missionSchema = new mongoose.Schema({
   }
 });
 
-// Middleware pour générer le code avant la sauvegarde
-missionSchema.pre('save', async function(next) {
-  if (this.isNew) {
-    this.code = await generateUniqueCode();
+// Middleware pour générer les codes avant la validation
+missionSchema.pre('validate', async function(next) {
+  try {
+    // Si code_mission n'est pas fourni, le générer
+    if (!this.code_mission) {
+      this.code_mission = await generateMissionCode();
+    } else {
+      // Vérifier si le code_mission fourni existe déjà
+      const existingMission = await mongoose.model('Mission').findOne({ 
+        code_mission: this.code_mission,
+        _id: { $ne: this._id } // Exclure la mission actuelle si c'est une mise à jour
+      });
+      
+      if (existingMission) {
+        throw new Error(`Le code de mission ${this.code_mission} existe déjà`);
+      }
+    }
+    
+    // Générer l'ancien format de code pour la compatibilité
+    if (!this.code) {
+      this.code = await generateLegacyCode();
+    }
+    
+    next();
+  } catch (error) {
+    next(error);
   }
+});
+
+// Middleware pour mettre à jour updatedAt
+missionSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();
 });

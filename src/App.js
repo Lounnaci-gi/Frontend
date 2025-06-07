@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { CacheProvider } from '@emotion/react';
 import createCache from '@emotion/cache';
@@ -11,25 +11,12 @@ import arLocale from 'date-fns/locale/ar-SA';
 import { useSelector } from 'react-redux';
 
 // Composants chargés paresseusement
-const MainLayout = React.lazy(() => import('./components/layout/MainLayout'));
-const Login = React.lazy(() => import('./components/auth/Login'));
-const Dashboard = React.lazy(() => import('./components/dashboard/Dashboard'));
-const Employees = React.lazy(() => import('./components/employees/Employees'));
-const Missions = React.lazy(() => import('./components/missions/Missions'));
-const Settings = React.lazy(() => import('./components/settings/Settings'));
-
-// Composant de chargement
-const LoadingFallback = () => (
-  <div style={{ 
-    display: 'flex', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    height: '100vh',
-    backgroundColor: '#f5f5f5'
-  }}>
-    <div>Chargement...</div>
-  </div>
-);
+const MainLayout = lazy(() => import('./components/layout/MainLayout'));
+const Login = lazy(() => import('./components/auth/Login'));
+const Dashboard = lazy(() => import('./components/dashboard/Dashboard'));
+const Employees = lazy(() => import('./components/employees/Employees'));
+const Missions = lazy(() => import('./components/missions/Missions'));
+const Settings = lazy(() => import('./components/settings/Settings'));
 
 // Configuration RTL pour Emotion
 const cacheRtl = createCache({
@@ -65,6 +52,19 @@ const ProtectedRoute = ({ children }) => {
   const { isAuthenticated } = useSelector((state) => state.auth);
   return isAuthenticated ? children : <Navigate to="/login" />;
 };
+
+// Composant de chargement
+const LoadingFallback = () => (
+  <div style={{ 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    height: '100vh',
+    backgroundColor: '#f5f5f5'
+  }}>
+    <div>Chargement...</div>
+  </div>
+);
 
 // Configuration du routeur avec les drapeaux de fonctionnalités futures
 const router = createBrowserRouter(
