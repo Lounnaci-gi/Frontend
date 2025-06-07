@@ -321,39 +321,22 @@ const Missions = () => {
         return;
       }
 
-      // Trouver le dernier numéro de mission pour cette année
-      const missionYear = missionDates.startDate.getFullYear();
-      const lastMission = await axiosInstance.get('/missions', {
-        params: {
-          year: missionYear,
-          sort: '-code',
-          limit: 1
-        }
-      });
-
-      let lastNumber = 0;
-      if (lastMission.data && lastMission.data.length > 0) {
-        const lastCode = lastMission.data[0].code;
-        const match = lastCode.match(/^(\d+)\/\d+$/);
-        if (match) {
-          lastNumber = parseInt(match[1], 10);
-        }
-      }
-
-      const missionsToCreate = selectedEmployees.map((employee, index) => {
+      const missionsToCreate = selectedEmployees.map((employee) => {
         if (!employee._id || !employee.matricule) {
           throw new Error(`Données employé incomplètes: ${employee.nom} ${employee.prenom}`);
         }
 
-        const sequenceNumber = lastNumber + index + 1;
-        const missionCode = generateMissionCode(sequenceNumber, missionYear);
-
         const missionData = {
-          code: missionCode,
           type: 'monthly',
           status: 'active',
           employee: employee._id,
-          destination: selectedDestinations.join(', '),
+          destinations: selectedDestinations.map(dest => ({
+            name: dest,
+            type: 'mission',
+            address: dest,
+            city: 'Alger',
+            country: 'Algeria'
+          })),
           startDate: missionDates.startDate.toISOString(),
           endDate: missionDates.endDate.toISOString(),
           transportMode: selectedTransportMode.trim(),
@@ -362,7 +345,6 @@ const Missions = () => {
         };
 
         console.log('Données de mission à créer:', {
-          code: missionData.code,
           employeeId: missionData.employee,
           employeeInfo: {
             matricule: employee.matricule,
@@ -371,7 +353,7 @@ const Missions = () => {
             centre: employee.centre,
             fonction: employee.poste
           },
-          destination: missionData.destination,
+          destinations: missionData.destinations,
           dates: {
             start: formatGregorianDate(missionData.startDate),
             end: formatGregorianDate(missionData.endDate)
@@ -1060,15 +1042,23 @@ const Missions = () => {
                   <TableCell align="right">{mission.employee.status === 'active' ? 'نشط' : mission.employee.status === 'inactive' ? 'غير نشط' : mission.employee.status}</TableCell>
                   <TableCell align="right">{mission.employee.telephone || '-'}</TableCell>
                   <TableCell align="right">{mission.employee.sexe === 'M' ? 'ذكر' : 'أنثى'}</TableCell>
-                  <TableCell align="right">{mission.employee.fonction}</TableCell>
+                  <TableCell align="right">{mission.employee.poste || '-'}</TableCell>
                   <TableCell align="right">{mission.employee.prenom}</TableCell>
                   <TableCell align="right">{mission.employee.nom}</TableCell>
-                  <TableCell align="right">{mission.employee.code}</TableCell>
-                  <TableCell align="right">{mission.code}</TableCell>
-                  <TableCell align="right">{mission.destination}</TableCell>
+                  <TableCell align="right">{mission.employee.matricule}</TableCell>
+                  <TableCell align="right">{mission.code_mission || '-'}</TableCell>
+                  <TableCell align="right">
+                    {console.log('Destinations pour mission', mission.code_mission, ':', mission.destinations)}
+                    {Array.isArray(mission.destinations) && mission.destinations.length > 0 
+                      ? mission.destinations.map(dest => {
+                          console.log('Destination:', dest);
+                          return dest.name || dest;
+                        }).join('، ')
+                      : mission.destination || '-'}
+                  </TableCell>
                   <TableCell align="right">{formatGregorianDate(mission.startDate)}</TableCell>
                   <TableCell align="right">{formatGregorianDate(mission.endDate)}</TableCell>
-                  <TableCell align="right">{mission.transportMode}</TableCell>
+                  <TableCell align="right">{mission.transportMode || '-'}</TableCell>
                   <TableCell align="right">{mission.type === 'monthly' ? 'شهرية' : 'خاصة'}</TableCell>
                 </TableRow>
               ))}

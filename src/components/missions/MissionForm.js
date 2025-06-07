@@ -30,7 +30,7 @@ const formatGregorianDate = (date) => {
 
 const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
   const [formData, setFormData] = useState({
-    code: '',
+    code_mission: '',
     employeeId: '',
     destinations: [],
     startDate: null,
@@ -102,7 +102,7 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
       fetchEmployees();
       if (mission) {
         setFormData({
-          code: mission.code || '',
+          code_mission: mission.code_mission || '',
           employeeId: mission.employee?._id || '',
           destinations: mission.destinations || [],
           startDate: new Date(mission.startDate) || null,
@@ -117,7 +117,7 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
         const today = new Date();
         const { start, end } = getMonthStartAndEnd(today);
         setFormData({
-          code: '',
+          code_mission: '',
           employeeId: '',
           destinations: [],
           startDate: start,
@@ -181,8 +181,8 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
               <TextField
                 fullWidth
                 label="رمز المهمة"
-                value={formData.code}
-                onChange={handleChange('code')}
+                value={formData.code_mission}
+                onChange={handleChange('code_mission')}
                 required
                 margin="normal"
               />
