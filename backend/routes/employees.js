@@ -120,7 +120,8 @@ router.post('/', auth, upload.single('photo'), async (req, res) => {
 
 router.get('/', auth, async (req, res) => {
   try {
-    const employees = await Employee.find().sort({ createdAt: -1 });
+    const employees = await Employee.find()
+      .sort({ centre: 1, createdAt: -1 });
     res.json(employees);
   } catch (error) {
     res.status(500).json({ message: error.message });

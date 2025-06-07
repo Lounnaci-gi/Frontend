@@ -36,6 +36,50 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Fonction pour obtenir le premier et dernier jour du mois
+  const getMonthStartAndEnd = (date) => {
+    const start = new Date(date.getFullYear(), date.getMonth(), 1);
+    const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    return { start, end };
+  };
+
+  // Gestionnaire de changement de date pour les missions mensuelles
+  const handleDateChange = (date) => {
+    if (formData.type === 'monthly' && date) {
+      const { start, end } = getMonthStartAndEnd(date);
+      setFormData(prev => ({
+        ...prev,
+        startDate: start,
+        endDate: end
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        startDate: date
+      }));
+    }
+  };
+
+  // Gestionnaire de changement de type de mission
+  const handleTypeChange = (event) => {
+    const newType = event.target.value;
+    setFormData(prev => {
+      if (newType === 'monthly' && prev.startDate) {
+        const { start, end } = getMonthStartAndEnd(prev.startDate);
+        return {
+          ...prev,
+          type: newType,
+          startDate: start,
+          endDate: end
+        };
+      }
+      return {
+        ...prev,
+        type: newType
+      };
+    });
+  };
+
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
@@ -59,6 +103,20 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
           status: mission.status || 'active',
           description: mission.description || '',
         });
+      } else {
+        // Pour une nouvelle mission mensuelle, définir la date de début au premier jour du mois courant
+        const today = new Date();
+        const { start, end } = getMonthStartAndEnd(today);
+        setFormData({
+          code: '',
+          employeeId: '',
+          destinations: [],
+          startDate: start,
+          endDate: end,
+          type: 'monthly',
+          status: 'active',
+          description: '',
+        });
       }
     }
   }, [open, mission]);
@@ -67,13 +125,6 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
     setFormData({
       ...formData,
       [field]: event.target.value,
-    });
-  };
-
-  const handleDateChange = (field) => (date) => {
-    setFormData({
-      ...formData,
-      [field]: date,
     });
   };
 
@@ -164,42 +215,40 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
               />
             </Grid>
             <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>نوع المهمة</InputLabel>
+                <Select
+                  value={formData.type}
+                  onChange={handleTypeChange}
+                  label="نوع المهمة"
+                >
+                  <MenuItem value="monthly">مهمة شهرية</MenuItem>
+                  <MenuItem value="special">مهمة خاصة</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} sm={6}>
               <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <DatePicker
                   label="تاريخ البداية"
                   value={formData.startDate}
-                  onChange={handleDateChange('startDate')}
-                  renderInput={(params) => (
-                    <TextField {...params} fullWidth margin="normal" required />
-                  )}
+                  onChange={handleDateChange}
+                  renderInput={(params) => <TextField {...params} fullWidth />}
                 />
               </LocalizationProvider>
             </Grid>
-            <Grid item xs={12} sm={6}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  label="تاريخ النهاية"
-                  value={formData.endDate}
-                  onChange={handleDateChange('endDate')}
-                  renderInput={(params) => (
-                    <TextField {...params} fullWidth margin="normal" required />
-                  )}
-                />
-              </LocalizationProvider>
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>نوع المهمة</InputLabel>
-                <Select
-                  value={formData.type}
-                  onChange={handleChange('type')}
-                  required
-                >
-                  <MenuItem value="monthly">شهرية</MenuItem>
-                  <MenuItem value="special">خاصة</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
+            {formData.type === 'special' && (
+              <Grid item xs={12} sm={6}>
+                <LocalizationProvider dateAdapter={AdapterDateFns}>
+                  <DatePicker
+                    label="تاريخ النهاية"
+                    value={formData.endDate}
+                    onChange={(date) => setFormData(prev => ({ ...prev, endDate: date }))}
+                    renderInput={(params) => <TextField {...params} fullWidth />}
+                  />
+                </LocalizationProvider>
+              </Grid>
+            )}
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth margin="normal">
                 <InputLabel>الحالة</InputLabel>

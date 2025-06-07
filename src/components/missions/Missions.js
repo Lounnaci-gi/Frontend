@@ -110,7 +110,8 @@ const Missions = () => {
       try {
         setLoading(true);
         const response = await axiosInstance.get('/employees');
-        console.log('Employees data:', response.data);
+        console.log('Raw employees data:', response.data);
+        
         if (Array.isArray(response.data)) {
           // Filtrer les employés actifs
           const activeEmployees = response.data.filter(emp => 
@@ -120,7 +121,12 @@ const Missions = () => {
           setEmployees(activeEmployees);
           
           // Extraire les centres uniques des employés actifs
-          const uniqueCentres = [...new Set(activeEmployees.map(emp => emp.centre || 'غير محدد'))];
+          const centresList = activeEmployees
+            .map(emp => emp.centre)
+            .filter(centre => centre && centre.trim() !== '')
+            .sort((a, b) => a.localeCompare(b));
+          
+          const uniqueCentres = [...new Set(centresList)];
           console.log('Unique centres:', uniqueCentres);
           setCentres(uniqueCentres);
         } else {
@@ -222,13 +228,20 @@ const Missions = () => {
     
     return employees.filter(employee => {
       const matchesCentre = selectedCentre === 'all' || employee.centre === selectedCentre;
+      const searchTermLower = searchTerm.toLowerCase();
       const matchesSearch = !searchTerm || 
-        employee.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        employee.prenom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        employee.matricule?.toLowerCase().includes(searchTerm.toLowerCase());
+        employee.nom?.toLowerCase().includes(searchTermLower) ||
+        employee.prenom?.toLowerCase().includes(searchTermLower) ||
+        employee.matricule?.toLowerCase().includes(searchTermLower) ||
+        employee.poste?.toLowerCase().includes(searchTermLower) ||
+        employee.code?.toLowerCase().includes(searchTermLower);
       
       console.log('Employee filter check:', {
         matricule: employee.matricule,
+        code: employee.code,
+        centre: employee.centre,
+        poste: employee.poste,
+        selectedCentre,
         matchesCentre,
         matchesSearch
       });
@@ -316,13 +329,16 @@ const Missions = () => {
             justifyContent: 'flex-end'
           }}>
             <FormControl sx={{ minWidth: 200 }}>
-              <InputLabel>النعيين</InputLabel>
+              <InputLabel>المركز</InputLabel>
               <Select
                 value={selectedCentre}
-                onChange={(e) => setSelectedCentre(e.target.value)}
-                label="النعيين"
+                onChange={(e) => {
+                  console.log('Selected centre changed:', e.target.value);
+                  setSelectedCentre(e.target.value);
+                }}
+                label="المركز"
               >
-                <MenuItem value="all">جميع النعيين</MenuItem>
+                <MenuItem value="all">جميع المراكز</MenuItem>
                 {centres.map((centre) => (
                   <MenuItem key={centre} value={centre}>
                     {centre}
@@ -469,7 +485,7 @@ const Missions = () => {
                         px: 0,
                         pr: 2
                       }}>
-                        {employee.affectation || '-'}
+                        {employee.centre || 'غير محدد'}
                       </Typography>
                       <Typography sx={{ width: '80px', textAlign: 'right', px: 0 }}>
                         {employee.sexe === 'M' ? 'ذكر' : 'أنثى'}
@@ -563,13 +579,16 @@ const Missions = () => {
                 justifyContent: 'flex-end'
               }}>
                 <FormControl sx={{ minWidth: 200 }}>
-                  <InputLabel>النعيين</InputLabel>
+                  <InputLabel>المركز</InputLabel>
                   <Select
                     value={selectedCentre}
-                    onChange={(e) => setSelectedCentre(e.target.value)}
-                    label="النعيين"
+                    onChange={(e) => {
+                      console.log('Selected centre changed:', e.target.value);
+                      setSelectedCentre(e.target.value);
+                    }}
+                    label="المركز"
                   >
-                    <MenuItem value="all">جميع النعيين</MenuItem>
+                    <MenuItem value="all">جميع المراكز</MenuItem>
                     {centres.map((centre) => (
                       <MenuItem key={centre} value={centre}>
                         {centre}
@@ -684,7 +703,7 @@ const Missions = () => {
                             px: 0,
                             pr: 2
                           }}>
-                            {employee.affectation || '-'}
+                            {employee.centre || 'غير محدد'}
                           </Typography>
                           <Typography sx={{ width: '80px', textAlign: 'right', px: 0 }}>
                             {employee.sexe === 'M' ? 'ذكر' : 'أنثى'}
