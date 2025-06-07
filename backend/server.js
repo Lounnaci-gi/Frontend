@@ -57,41 +57,6 @@ app.get('/api/health', (req, res) => {
 // Fonction pour initialiser l'admin
 async function initializeAdmin() {
   try {
-    const adminExists = await User.findOne({ email: 'admin@admin.com' });
-    
-    if (!adminExists) {
-      const hashedPassword = await bcrypt.hash('admin123', 10);
-      
-      const admin = await User.create({
-        email: 'admin@admin.com',
-        password: hashedPassword,
-        role: 'admin',
-        name: 'Administrateur',
-        username: 'admin',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      });
-      
-      console.log('Admin créé avec succès:', admin.email);
-    } else {
-      console.log('Admin existe déjà');
-    }
-  } catch (error) {
-    console.error('Erreur lors de l\'initialisation de l\'admin:', error);
-  }
-}
-
-// Connexion à MongoDB et initialisation de l'admin
-mongoose.connect(process.env.MONGODB_URI)
-  .then(async () => {
-    console.log('Connecté à MongoDB');
-    await initializeAdmin();
-  })
-  .catch(err => console.error('Erreur de connexion à MongoDB:', err));
-
-// Route pour créer l'admin (à supprimer en production)
-app.post('/api/init-admin', async (req, res) => {
-  try {
     const adminExists = await User.findOne({ username: 'admin' });
     
     if (!adminExists) {
@@ -107,14 +72,41 @@ app.post('/api/init-admin', async (req, res) => {
         updatedAt: new Date()
       });
       
-      res.json({ message: 'Admin créé avec succès' });
+      console.log('Admin créé avec succès');
     } else {
-      res.json({ message: 'Admin existe déjà' });
+      console.log('Admin existe déjà');
     }
   } catch (error) {
-    res.status(500).json({ message: 'Erreur serveur' });
+    console.error('Erreur lors de l\'initialisation de l\'admin:', error);
   }
-});
+}
+
+// Connexion à MongoDB et démarrage du serveur
+async function startServer() {
+  try {
+    if (!process.env.MONGODB_URI) {
+      throw new Error('MONGODB_URI n\'est pas défini dans le fichier .env');
+    }
+
+    console.log('Tentative de connexion à MongoDB...');
+    await mongoose.connect(process.env.MONGODB_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true
+    });
+    console.log('Connecté à MongoDB avec succès');
+
+    // Initialiser l'admin après la connexion à MongoDB
+    await initializeAdmin();
+
+    // Démarrer le serveur
+    app.listen(PORT, () => {
+      console.log(`Serveur démarré sur le port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Erreur lors du démarrage du serveur:', error);
+    process.exit(1);
+  }
+}
 
 // Gestion des erreurs
 app.use((err, req, res, next) => {
@@ -122,6 +114,5 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Une erreur est survenue sur le serveur' });
 });
 
-app.listen(PORT, () => {
-  console.log(`Serveur démarré sur le port ${PORT}`);
-}); 
+// Démarrer le serveur
+startServer(); 

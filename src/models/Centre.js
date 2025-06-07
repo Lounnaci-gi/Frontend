@@ -30,9 +30,6 @@ const centreSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index pour la recherche rapide
-centreSchema.index({ nom: 1 });
-
 const Centre = mongoose.model('Centre', centreSchema);
 
 export default Centre; 

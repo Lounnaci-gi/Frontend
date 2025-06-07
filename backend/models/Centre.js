@@ -21,7 +21,6 @@ const centreSchema = new mongoose.Schema({
 });
 
 // Index pour améliorer les performances de recherche
-centreSchema.index({ nom: 1 });
 centreSchema.index({ status: 1 });
 
 const Centre = mongoose.model('Centre', centreSchema);

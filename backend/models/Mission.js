@@ -2,25 +2,22 @@ const mongoose = require('mongoose');
 
 // Fonction pour générer un code unique
 const generateUniqueCode = async () => {
-  const prefix = 'M';
   const date = new Date();
-  const year = date.getFullYear().toString().slice(-2);
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
   
-  // Trouver le dernier code pour ce mois
+  // Trouver le dernier code pour cette année
   const lastMission = await mongoose.model('Mission').findOne(
-    { code: new RegExp(`^${prefix}${year}${month}`) },
+    { code: new RegExp(`^\\d{5}/${year}$`) },
     { code: 1 },
     { sort: { code: -1 } }
   );
 
-  let sequence = '001';
+  let sequence = 1;
   if (lastMission) {
-    const lastSequence = parseInt(lastMission.code.slice(-3));
-    sequence = (lastSequence + 1).toString().padStart(3, '0');
+    sequence = parseInt(lastMission.code.split('/')[0]) + 1;
   }
 
-  return `${prefix}${year}${month}${sequence}`;
+  return `${sequence.toString().padStart(5, '0')}/${year}`;
 };
 
 const missionSchema = new mongoose.Schema({

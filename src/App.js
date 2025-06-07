@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { CacheProvider } from '@emotion/react';
 import createCache from '@emotion/cache';
@@ -10,13 +10,26 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import arLocale from 'date-fns/locale/ar-SA';
 import { useSelector } from 'react-redux';
 
-// Composants
-import MainLayout from './components/layout/MainLayout';
-import Login from './components/auth/Login';
-import Dashboard from './components/dashboard/Dashboard';
-import Employees from './components/employees/Employees';
-import Missions from './components/missions/Missions';
-import Settings from './components/settings/Settings';
+// Composants chargés paresseusement
+const MainLayout = React.lazy(() => import('./components/layout/MainLayout'));
+const Login = React.lazy(() => import('./components/auth/Login'));
+const Dashboard = React.lazy(() => import('./components/dashboard/Dashboard'));
+const Employees = React.lazy(() => import('./components/employees/Employees'));
+const Missions = React.lazy(() => import('./components/missions/Missions'));
+const Settings = React.lazy(() => import('./components/settings/Settings'));
+
+// Composant de chargement
+const LoadingFallback = () => (
+  <div style={{ 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    height: '100vh',
+    backgroundColor: '#f5f5f5'
+  }}>
+    <div>Chargement...</div>
+  </div>
+);
 
 // Configuration RTL pour Emotion
 const cacheRtl = createCache({
@@ -58,15 +71,21 @@ const router = createBrowserRouter(
   [
     {
       path: "/login",
-      element: <Login />
+      element: (
+        <Suspense fallback={<LoadingFallback />}>
+          <Login />
+        </Suspense>
+      )
     },
     {
       path: "/",
       element: (
         <ProtectedRoute>
-          <MainLayout>
-            <Dashboard />
-          </MainLayout>
+          <Suspense fallback={<LoadingFallback />}>
+            <MainLayout>
+              <Dashboard />
+            </MainLayout>
+          </Suspense>
         </ProtectedRoute>
       )
     },
@@ -74,9 +93,11 @@ const router = createBrowserRouter(
       path: "/dashboard",
       element: (
         <ProtectedRoute>
-          <MainLayout>
-            <Dashboard />
-          </MainLayout>
+          <Suspense fallback={<LoadingFallback />}>
+            <MainLayout>
+              <Dashboard />
+            </MainLayout>
+          </Suspense>
         </ProtectedRoute>
       )
     },
@@ -84,9 +105,11 @@ const router = createBrowserRouter(
       path: "/employees",
       element: (
         <ProtectedRoute>
-          <MainLayout>
-            <Employees />
-          </MainLayout>
+          <Suspense fallback={<LoadingFallback />}>
+            <MainLayout>
+              <Employees />
+            </MainLayout>
+          </Suspense>
         </ProtectedRoute>
       )
     },
@@ -94,9 +117,11 @@ const router = createBrowserRouter(
       path: "/missions",
       element: (
         <ProtectedRoute>
-          <MainLayout>
-            <Missions />
-          </MainLayout>
+          <Suspense fallback={<LoadingFallback />}>
+            <MainLayout>
+              <Missions />
+            </MainLayout>
+          </Suspense>
         </ProtectedRoute>
       )
     },
@@ -104,9 +129,11 @@ const router = createBrowserRouter(
       path: "/settings",
       element: (
         <ProtectedRoute>
-          <MainLayout>
-            <Settings />
-          </MainLayout>
+          <Suspense fallback={<LoadingFallback />}>
+            <MainLayout>
+              <Settings />
+            </MainLayout>
+          </Suspense>
         </ProtectedRoute>
       )
     }

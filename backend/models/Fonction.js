@@ -21,7 +21,6 @@ const fonctionSchema = new mongoose.Schema({
 });
 
 // Index pour améliorer les performances de recherche
-fonctionSchema.index({ nom: 1 });
 fonctionSchema.index({ status: 1 });
 
 const Fonction = mongoose.model('Fonction', fonctionSchema);
