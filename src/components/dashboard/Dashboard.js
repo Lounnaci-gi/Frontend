@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
@@ -22,6 +22,7 @@ import {
   CheckCircle as CheckCircleIcon,
   TrendingUp as TrendingUpIcon,
   LocationOn as LocationIcon,
+  Business as BusinessIcon,
 } from '@mui/icons-material';
 import { fetchMissionsStart, fetchMissionsSuccess, fetchMissionsFailure } from '../../store/slices/missionsSlice';
 import { fetchEmployeesStart, fetchEmployeesSuccess, fetchEmployeesFailure } from '../../store/slices/employeesSlice';
@@ -29,7 +30,8 @@ import axiosInstance from '../../config/axios';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
-const StatCard = ({ title, value, icon, color, subtitle }) => (
+// Déplacer le composant StatCard en dehors du composant Dashboard
+const StatCard = React.memo(({ title, value, icon, color, subtitle }) => (
   <Card 
     sx={{ 
       height: '100%',
@@ -86,7 +88,10 @@ const StatCard = ({ title, value, icon, color, subtitle }) => (
       )}
     </CardContent>
   </Card>
-);
+));
+
+// Définir le nom du composant pour le débogage
+StatCard.displayName = 'StatCard';
 
 const Dashboard = () => {
   const dispatch = useDispatch();
@@ -133,6 +138,28 @@ const Dashboard = () => {
   const monthlyMissions = missions.filter(m => m.type === 'monthly' && m.status === 'active');
   const specialMissions = missions.filter(m => m.type === 'special' && m.status === 'active');
   const completedMissions = missions.filter(m => m.status === 'completed');
+
+  // Calculer le pourcentage des employés en mission mensuelle
+  const monthlyMissionPercentage = useMemo(() => {
+    if (employees.length === 0) return 0;
+    const employeesWithMonthlyMission = new Set(monthlyMissions.map(m => m.employee?._id)).size;
+    return Math.round((employeesWithMonthlyMission / employees.length) * 100);
+  }, [monthlyMissions, employees]);
+
+  // Obtenir les 3 dernières missions
+  const lastThreeMissions = useMemo(() => {
+    return [...missions]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 3);
+  }, [missions]);
+
+  // Calculer le nombre de centres uniques
+  const uniqueCentres = useMemo(() => {
+    const centres = employees
+      .map(emp => emp.centre)
+      .filter(centre => centre && centre.trim() !== '');
+    return [...new Set(centres)].length;
+  }, [employees]);
 
   if (missionsLoading || employeesLoading) {
     return (
@@ -205,10 +232,10 @@ const Dashboard = () => {
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="المهام الشهرية"
-            value={monthlyMissions.length}
+            value={`${monthlyMissionPercentage}%`}
             icon={<TrendingUpIcon fontSize="large" />}
             color="info"
-            subtitle="المهام الشهرية المخطط لها"
+            subtitle={`${monthlyMissions.length} مهمة نشطة - ${monthlyMissionPercentage}% من الموظفين`}
           />
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
@@ -220,11 +247,107 @@ const Dashboard = () => {
             subtitle="المهام التي تم إنجازها"
           />
         </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <StatCard
+            title="المراكز"
+            value={uniqueCentres}
+            icon={<BusinessIcon fontSize="large" />}
+            color="warning"
+            subtitle="عدد المراكز المسجلة في النظام"
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card 
+            sx={{ 
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
+              transition: 'all 0.3s ease-in-out',
+              borderRadius: 3,
+              '&:hover': {
+                transform: 'translateY(-8px)',
+                boxShadow: '0 10px 20px rgba(0,0,0,0.12), 0 6px 6px rgba(0,0,0,0.16)',
+              },
+              bgcolor: 'background.paper',
+              border: '1px solid',
+              borderColor: 'primary.light',
+            }}
+          >
+            <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', p: 3 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <Box 
+                  sx={{ 
+                    color: 'primary.main', 
+                    ml: 1,
+                    p: 1,
+                    borderRadius: '50%',
+                    bgcolor: 'primary.lighter',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.08)',
+                  }}
+                >
+                  <AssignmentIcon fontSize="medium" />
+                </Box>
+                <Typography variant="subtitle1" component="div" sx={{ fontWeight: 'bold', color: 'text.primary' }}>
+                  المهام النشطة الأخيرة
+                </Typography>
+              </Box>
+              <Box sx={{ flexGrow: 1, overflow: 'auto', mt: 1 }}>
+                {lastThreeMissions.length > 0 ? (
+                  <List sx={{ p: 0 }}>
+                    {lastThreeMissions.map((mission, index) => (
+                      <ListItem 
+                        key={mission._id}
+                        sx={{ 
+                          p: 0.5,
+                          mb: 0.5,
+                          bgcolor: 'background.default',
+                          borderRadius: 1,
+                          border: '1px solid',
+                          borderColor: 'primary.lighter',
+                          flexDirection: 'row-reverse',
+                          minHeight: '40px'
+                        }}
+                      >
+                        <ListItemIcon sx={{ minWidth: '32px' }}>
+                          <LocationIcon fontSize="small" color="primary" />
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={
+                            <Typography variant="body2" sx={{ fontWeight: 'medium', color: 'primary.dark' }}>
+                              {mission.code_mission || '-'}
+                            </Typography>
+                          }
+                          secondary={
+                            <Typography variant="caption" color="text.secondary">
+                              {`${mission.employee?.nom || ''} ${mission.employee?.prenom || ''}`}
+                            </Typography>
+                          }
+                          sx={{ textAlign: 'right', py: 0 }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                ) : (
+                  <Alert 
+                    icon={<CheckCircleIcon fontSize="small" />} 
+                    severity="info"
+                    sx={{ mt: 1, py: 0.5 }}
+                  >
+                    لا توجد مهام نشطة حالياً
+                  </Alert>
+                )}
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
       </Grid>
 
-      {/* Alertes et Missions Actives */}
+      {/* Alertes */}
       <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12}>
           <Paper 
             sx={{ 
               p: 3,
@@ -292,91 +415,9 @@ const Dashboard = () => {
             </Box>
           </Paper>
         </Grid>
-        
-        <Grid item xs={12} md={6}>
-          <Paper 
-            sx={{ 
-              p: 3,
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              boxShadow: 3,
-              borderRadius: 2,
-              bgcolor: 'background.paper',
-              border: '1px solid',
-              borderColor: 'primary.lighter',
-            }}
-          >
-            <Typography 
-              variant="h6" 
-              gutterBottom
-              sx={{ 
-                fontWeight: 'bold',
-                mb: 2,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                color: 'primary.dark',
-              }}
-            >
-              <AssignmentIcon color="primary" />
-              المهام النشطة الأخيرة
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            <Box sx={{ flexGrow: 1, overflow: 'auto' }}>
-              {activeMissions.length > 0 ? (
-                <List>
-                  {activeMissions.slice(0, 5).map((mission) => (
-                    <ListItem 
-                      key={mission.code}
-                      sx={{ 
-                        mb: 1,
-                        bgcolor: 'background.default',
-                        borderRadius: 1,
-                        border: '1px solid',
-                        borderColor: 'primary.lighter',
-                      }}
-                    >
-                      <ListItemIcon>
-                        <LocationIcon color="primary" />
-                      </ListItemIcon>
-                      <ListItemText
-                        primary={`مهمة ${mission.code}`}
-                        secondary={
-                          <>
-                            <Typography component="span" variant="body2" color="text.primary">
-                              {mission.employee.name}
-                            </Typography>
-                            {' - '}
-                            {mission.destinations.join('، ')}
-                          </>
-                        }
-                        primaryTypographyProps={{ 
-                          fontWeight: 'medium',
-                          color: 'primary.dark',
-                        }}
-                        secondaryTypographyProps={{ 
-                          sx: { display: 'flex', alignItems: 'center', gap: 0.5 }
-                        }}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              ) : (
-                <Alert 
-                  icon={<CheckCircleIcon />} 
-                  severity="info"
-                  sx={{ mt: 2 }}
-                >
-                  لا توجد مهام نشطة حالياً
-                </Alert>
-              )}
-            </Box>
-          </Paper>
-        </Grid>
       </Grid>
     </Box>
   );
 };
 
-export default Dashboard; 
+export default React.memo(Dashboard); 

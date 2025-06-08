@@ -56,6 +56,8 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { useReactToPrint } from 'react-to-print';
+import MissionPrint from './MissionPrint';
 
 // Fonction utilitaire pour formater les dates en grégorien
 const formatGregorianDate = (date) => {
@@ -83,8 +85,15 @@ const missionTypeColors = {
 const Missions = () => {
   const dispatch = useDispatch();
   const cardRef = useRef(null);
+  const printRef = useRef(); // Ref pour le composant d'impression
   const { employees: employeesFromStore, loading: employeesLoading } = useSelector((state) => state.employees);
   const { missions, loading: missionsLoading } = useSelector((state) => state.missions);
+  
+  // États de base
+  const [loading, setLoading] = useState(false);
+  const [employees, setEmployees] = useState([]);
+  const [centres, setCentres] = useState([]);
+  const [tabValue, setTabValue] = useState(0);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchTerm, setSearchTerm] = useState('');
@@ -98,10 +107,29 @@ const Missions = () => {
   });
   const [error, setError] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState(null);
-  const [selectedTransportMode, setSelectedTransportMode] = useState('');
   const [transportModeInput, setTransportModeInput] = useState('');
   const [formValid, setFormValid] = useState(false);
   const [showValidationErrors, setShowValidationErrors] = useState(false);
+  const [destinationInput, setDestinationInput] = useState('');
+  const [showCreateMissionButton, setShowCreateMissionButton] = useState(false);
+  const [sortConfig, setSortConfig] = useState({ key: 'code_mission', direction: 'asc' });
+
+  // États pour les dialogues
+  const [formOpen, setFormOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [groupMissionDialogOpen, setGroupMissionDialogOpen] = useState(false);
+  const [filterDialogOpen, setFilterDialogOpen] = useState(false);
+  const [selectedMission, setSelectedMission] = useState(null);
+  const [missionToDelete, setMissionToDelete] = useState(null);
+  const [printDialogOpen, setPrintDialogOpen] = useState(false); // État pour le dialogue d'impression
+
+  const handlePrint = useReactToPrint({
+    content: () => printRef.current,
+    documentTitle: `Mission-${selectedMission?.code_mission || 'Impression'}`, // Nom du fichier PDF
+    pageStyle: `@page { size: A4; margin: 0; } body { margin: 0; }`,
+    onAfterPrint: () => setPrintDialogOpen(false), // Fermer le dialogue après impression
+  });
+
   const [transportModes, setTransportModes] = useState([
     'سيارة الخدمة',
     'سيارة شخصية',
@@ -182,15 +210,38 @@ const Missions = () => {
     setPage(0);
   };
 
+  const handleSort = (key) => {
+    setSortConfig(prevConfig => ({
+      key,
+      direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
   const filteredMissions = useMemo(() => {
-    return missions.filter((mission) => {
+    let filtered = missions.filter((mission) => {
       const matchesSearch = Object.values(mission).some((value) =>
         value.toString().toLowerCase().includes(searchTerm.toLowerCase())
       );
       const matchesTab = tabValue === 0 ? true : mission.type === (tabValue === 1 ? 'monthly' : 'special');
       return matchesSearch && matchesTab;
     });
-  }, [missions, searchTerm, tabValue]);
+
+    // Tri des missions
+    if (sortConfig.key) {
+      filtered.sort((a, b) => {
+        const aValue = a[sortConfig.key] || '';
+        const bValue = b[sortConfig.key] || '';
+        
+        if (sortConfig.direction === 'asc') {
+          return aValue.localeCompare(bValue);
+        } else {
+          return bValue.localeCompare(aValue);
+        }
+      });
+    }
+
+    return filtered;
+  }, [missions, searchTerm, tabValue, sortConfig]);
 
   const handleOpenForm = (mission = null) => {
     setSelectedMission(mission);
@@ -232,11 +283,14 @@ const Missions = () => {
   const handleEmployeeSelect = (employee) => {
     setSelectedEmployees(prev => {
       const isSelected = prev.some(emp => emp._id === employee._id);
-      if (isSelected) {
-        return prev.filter(emp => emp._id !== employee._id);
-      } else {
-        return [...prev, employee];
-      }
+      const newSelection = isSelected 
+        ? prev.filter(emp => emp._id !== employee._id)
+        : [...prev, employee];
+      
+      // Mettre à jour l'état du bouton en fonction de la sélection
+      setShowCreateMissionButton(newSelection.length > 0);
+      
+      return newSelection;
     });
   };
 
@@ -246,9 +300,11 @@ const Missions = () => {
     );
 
     if (allSelected) {
-      setSelectedEmployees(prev => 
-        prev.filter(emp => !filteredEmployees.some(filtered => filtered._id === emp._id))
-      );
+      setSelectedEmployees(prev => {
+        const newSelection = prev.filter(emp => !filteredEmployees.some(filtered => filtered._id === emp._id));
+        setShowCreateMissionButton(newSelection.length > 0);
+        return newSelection;
+      });
     } else {
       const newSelected = [...selectedEmployees];
       filteredEmployees.forEach(emp => {
@@ -257,6 +313,7 @@ const Missions = () => {
         }
       });
       setSelectedEmployees(newSelected);
+      setShowCreateMissionButton(true);
     }
   };
 
@@ -568,6 +625,10 @@ const Missions = () => {
     missionDates.endDate
   ]);
 
+  const handleCreateMonthlyMission = () => {
+    setGroupMissionDialogOpen(true);
+  };
+
   const renderEmployeesList = () => {
     return (
       <>
@@ -577,76 +638,86 @@ const Missions = () => {
             gap: 2, 
             flexDirection: { xs: 'column', sm: 'row' },
             alignItems: { xs: 'stretch', sm: 'center' },
-            justifyContent: 'flex-end'
+            justifyContent: 'space-between'
           }}>
-            <FormControl sx={{ minWidth: 200 }}>
-              <InputLabel>المركز</InputLabel>
-              <Select
-                value={selectedCentre}
-                onChange={(e) => {
-                  setSelectedCentre(e.target.value);
-                }}
-                label="المركز"
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              {showCreateMissionButton && (
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  onClick={handleCreateMonthlyMission}
+                  sx={{ minWidth: 200 }}
+                >
+                  إنشاء مهمة شهرية
+                </Button>
+              )}
+              <Button
+                variant="outlined"
+                onClick={handleSelectAll}
+                startIcon={<Checkbox 
+                  checked={filteredEmployees.length > 0 && filteredEmployees.every(emp => 
+                    selectedEmployees.some(selected => selected._id === emp._id)
+                  )}
+                  indeterminate={
+                    filteredEmployees.some(emp => 
+                      selectedEmployees.some(selected => selected._id === emp._id)
+                    ) && 
+                    !filteredEmployees.every(emp => 
+                      selectedEmployees.some(selected => selected._id === emp._id)
+                    )
+                  }
+                  sx={{ p: 0 }}
+                />}
               >
-                <MenuItem value="all">جميع المراكز</MenuItem>
-                {centres.map((centre) => (
-                  <MenuItem key={centre} value={centre}>
-                    {centre}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <TextField
-              fullWidth
-              variant="outlined"
-              placeholder="بحث عن موظف..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
-              }}
-            />
+                {filteredEmployees.every(emp => 
+                  selectedEmployees.some(selected => selected._id === emp._id)
+                ) ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
+              </Button>
+              <Typography variant="body2" color="text.secondary">
+                {selectedEmployees.length} موظف محدد
+              </Typography>
+            </Box>
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 2,
+              flexDirection: { xs: 'column', sm: 'row' },
+              alignItems: { xs: 'stretch', sm: 'center' }
+            }}>
+              <FormControl sx={{ minWidth: 200 }}>
+                <InputLabel>المركز</InputLabel>
+                <Select
+                  value={selectedCentre}
+                  onChange={(e) => {
+                    setSelectedCentre(e.target.value);
+                  }}
+                  label="المركز"
+                >
+                  <MenuItem value="all">جميع المراكز</MenuItem>
+                  {centres.map((centre) => (
+                    <MenuItem key={centre} value={centre}>
+                      {centre}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <TextField
+                fullWidth
+                variant="outlined"
+                placeholder="بحث عن موظف..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Box>
           </Box>
         </Paper>
-
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'flex-end',
-          alignItems: 'center',
-          gap: 2,
-          px: 3,
-          mx: 0,
-          mb: 2,
-          flexDirection: 'row-reverse'
-        }}>
-          <Box sx={{ width: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }} />
-          <Box sx={{ width: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }} />
-          <Typography sx={{ width: '80px', textAlign: 'right', px: 0 }}>
-            الحالة
-          </Typography>
-          <Box>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => handleOpenForm()}
-              sx={{ ml: 1 }}
-            >
-              مهمة جديدة
-            </Button>
-            <Button
-              variant="outlined"
-              startIcon={<FilterListIcon />}
-              onClick={() => setFilterDialogOpen(true)}
-              sx={{ ml: 1 }}
-            >
-              تصفية
-            </Button>
-          )}
-        </Box>
 
         <Paper sx={{ mt: 2 }}>
           <List sx={{ px: 3, mx: 0 }}>
@@ -746,457 +817,216 @@ const Missions = () => {
   };
 
   return (
-    <Box sx={{ 
-      flexGrow: 1,
-      p: { xs: 2, sm: 3 },
-      maxWidth: '100%',
-      overflow: 'hidden',
-      marginLeft: { sm: '240px' },
-      width: { sm: 'calc(100% - 240px)' },
-      position: 'relative',
-      zIndex: 1,
-      bgcolor: 'background.default',
-    }}>
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        mb: 3,
-        flexDirection: 'row-reverse'
-      }}>
-        <Typography variant="h4" component="h1">
-          المهام
-        </Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => handleOpenForm()}
-        >
-          إضافة مهمة
-        </Button>
-      </Box>
+    <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ar}>
+      <Box sx={{ direction: 'rtl' }}>
+        <Box sx={{ 
+          flexGrow: 1,
+          p: { xs: 2, sm: 3 },
+          maxWidth: '100%',
+          overflow: 'hidden',
+          marginLeft: { sm: '240px' },
+          width: { sm: 'calc(100% - 240px)' },
+          position: 'relative',
+          zIndex: 1,
+          bgcolor: 'background.default',
+        }}>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            mb: 3,
+            flexDirection: 'row-reverse'
+          }}>
+            <Typography variant="h4" component="h1">
+              المهام
+            </Typography>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              onClick={() => handleOpenForm()}
+            >
+              إضافة مهمة
+            </Button>
+          </Box>
 
-      <Paper sx={{ mb: 2 }}>
-        <Tabs 
-          value={tabValue} 
-          onChange={handleTabChange} 
-          sx={{ 
-            borderBottom: 1, 
-            borderColor: 'divider',
-            '& .MuiTabs-flexContainer': {
-              justifyContent: 'flex-end',
-            },
-            '& .MuiTab-root': {
-              minWidth: 120,
-              textAlign: 'right',
-            }
-          }}
-        >
-          <Tab label="المهام الشهرية" />
-          <Tab label="المهام" />
-        </Tabs>
-
-        {tabValue === 0 && (
-          <>
-            <Paper sx={{ mb: 2, p: 2 }}>
-              <Box sx={{ 
-                display: 'flex', 
-                gap: 2, 
-                flexDirection: { xs: 'column', sm: 'row' },
-                alignItems: { xs: 'stretch', sm: 'center' },
-                justifyContent: 'flex-end'
-              }}>
-                <FormControl sx={{ minWidth: 200 }}>
-                  <InputLabel>المركز</InputLabel>
-                  <Select
-                    value={selectedCentre}
-                    onChange={(e) => {
-                      setSelectedCentre(e.target.value);
-                    }}
-                    label="المركز"
-                  >
-                    <MenuItem value="all">جميع المراكز</MenuItem>
-                    {centres.map((centre) => (
-                      <MenuItem key={centre} value={centre}>
-                        {centre}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <TextField
-                  fullWidth
-                  variant="outlined"
-                  placeholder="بحث عن موظف..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Box>
-            </Paper>
-
-            <Box sx={{ 
-              mb: 2, 
-              display: 'flex', 
-              justifyContent: 'flex-end', 
-              alignItems: 'center',
-              flexDirection: { xs: 'column', sm: 'row' },
-              gap: 2,
-              px: 3
-            }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Button
-                  variant="outlined"
-                  onClick={handleSelectAll}
-                  sx={{ minWidth: '150px' }}
-                  disabled={filteredEmployees.length === 0}
-                >
-                  {filteredEmployees.every(emp => 
-                    selectedEmployees.some(selected => selected._id === emp._id)
-                  ) ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
-                </Button>
-                {selectedEmployees.length > 0 && (
-                  <Typography>
-                    {selectedEmployees.length} موظف محدد
-                  </Typography>
-                )}
-              </Box>
-              {selectedEmployees.length > 0 && (
-                <Button
-                  variant="contained"
-                  startIcon={<AssignmentIcon />}
-                  onClick={() => setGroupMissionDialogOpen(true)}
-                >
-                  إنشاء مهمة للموظفين المحددين
-                </Button>
-              )}
-            </Box>
-
-            <Paper sx={{ mt: 2 }}>
-              <List sx={{ px: 3, mx: 0 }}>
-                {filteredEmployees.length > 0 ? (
-                  filteredEmployees
-                    .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                    .map((employee, index) => (
-                      <React.Fragment key={employee._id}>
-                        <ListItem
-                          sx={{
-                            '&:hover': {
-                              bgcolor: 'action.hover',
-                            },
-                            flexDirection: 'row-reverse',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 2,
-                            justifyContent: 'flex-start',
-                            px: 0,
-                            mx: 0
-                          }}
-                        >
-                          <Box sx={{ width: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                            <Checkbox
-                              edge="end"
-                              checked={selectedEmployees.some(emp => emp._id === employee._id)}
-                              onChange={() => handleEmployeeSelect(employee)}
-                            />
-                          </Box>
-                          <ListItemIcon sx={{ width: '40px', minWidth: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                            <PersonIcon color="primary" />
-                          </ListItemIcon>
-                          <Typography sx={{ 
-                            width: '80px', 
-                            textAlign: 'right', 
-                            px: 0,
-                            pr: 2
-                          }}>
-                            {employee.matricule}
-                          </Typography>
-                          <Box sx={{ width: '200px', textAlign: 'right', px: 0, pr: 2 }}>
-                            <Typography sx={{ fontWeight: 'medium' }}>
-                              {`${employee.nom} ${employee.prenom}`}
-                            </Typography>
-                          </Box>
-                          <Typography sx={{ width: '120px', textAlign: 'right', px: 0 }}>
-                            {employee.poste || '-'}
-                          </Typography>
-                          <Typography sx={{ 
-                            width: '120px', 
-                            textAlign: 'right', 
-                            px: 0,
-                            pr: 2
-                          }}>
-                            {employee.centre || 'غير محدد'}
-                          </Typography>
-                          <Typography sx={{ width: '80px', textAlign: 'right', px: 0 }}>
-                            {employee.sexe === 'M' ? 'ذكر' : 'أنثى'}
-                          </Typography>
-                          <Typography sx={{ width: '100px', textAlign: 'right', px: 0 }}>
-                            {employee.telephone || '-'}
-                          </Typography>
-                          <Box sx={{ width: '80px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                            <Chip
-                              label="نشط"
-                              color="success"
-                              size="small"
-                            />
-                          </Box>
-                        </ListItem>
-                        {index < filteredEmployees.length - 1 && <Divider />}
-                      </React.Fragment>
-                    ))
-                ) : (
-                  <ListItem>
-                    <ListItemText 
-                      primary="لا يوجد موظفون نشطين في هذه الفئة"
-                      sx={{ textAlign: 'center' }}
-                    />
-                  </ListItem>
-                )}
-              </List>
-              <TablePagination
-                rowsPerPageOptions={[5, 10, 25]}
-                component="div"
-                count={filteredEmployees.length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-                labelRowsPerPage="عدد الصفوف في الصفحة"
-                labelDisplayedRows={({ from, to, count }) => `${from}-${to} من ${count}`}
-              />
-            </Paper>
-          </>
-        )}
-        {tabValue === 1 && <MissionForm />}
-      </Paper>
-
-      <TableContainer>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell align="right" sx={{ fontWeight: 'bold' }}>الحالة</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold' }}>الهاتف</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold' }}>الجنس</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold' }}>الوظيفة</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold' }}>اللقب</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold' }}>الاسم</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold' }}>رمز الموظف</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold' }}>رمز المهمة</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold' }}>الوجهة</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold' }}>تاريخ البدء</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold' }}>تاريخ الانتهاء</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold' }}>وسيلة النقل</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold' }}>النوع</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredMissions
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((mission) => (
-                <TableRow key={mission._id}>
-                  <TableCell align="right">{mission.employee.status === 'active' ? 'نشط' : mission.employee.status === 'inactive' ? 'غير نشط' : mission.employee.status}</TableCell>
-                  <TableCell align="right">{mission.employee.telephone || '-'}</TableCell>
-                  <TableCell align="right">{mission.employee.sexe === 'M' ? 'ذكر' : 'أنثى'}</TableCell>
-                  <TableCell align="right">{mission.employee.poste || '-'}</TableCell>
-                  <TableCell align="right">{mission.employee.prenom}</TableCell>
-                  <TableCell align="right">{mission.employee.nom}</TableCell>
-                  <TableCell align="right">{mission.employee.matricule}</TableCell>
-                  <TableCell align="right">{mission.code_mission || '-'}</TableCell>
-                  <TableCell align="right">
-                    {console.log('Destinations pour mission', mission.code_mission, ':', mission.destinations)}
-                    {Array.isArray(mission.destinations) && mission.destinations.length > 0 
-                      ? mission.destinations.map(dest => {
-                          console.log('Destination:', dest);
-                          return dest.name || dest;
-                        }).join('، ')
-                      : mission.destination || '-'}
-                  </TableCell>
-                  <TableCell align="right">{formatGregorianDate(mission.startDate)}</TableCell>
-                  <TableCell align="right">{formatGregorianDate(mission.endDate)}</TableCell>
-                  <TableCell align="right">{mission.transportMode || '-'}</TableCell>
-                  <TableCell align="right">{mission.type === 'monthly' ? 'شهرية' : 'خاصة'}</TableCell>
-                </TableRow>
-              ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-        <TablePagination
-          component="div"
-          count={filteredMissions.length}
-          page={page}
-          onPageChange={handleChangePage}
-          rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-          rowsPerPageOptions={[5, 10, 25]}
-        />
-      </Paper>
-
-      {/* Dialog pour le formulaire de mission */}
-      <Dialog
-        open={formOpen}
-        onClose={handleCloseForm}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          {selectedMission ? 'تعديل المهمة' : 'مهمة جديدة'}
-        </DialogTitle>
-        <DialogContent>
-          <MissionForm
-            mission={selectedMission}
-            onSuccess={handleFormSuccess}
-            onClose={handleCloseForm}
-          />
-        </DialogContent>
-      </Dialog>
-
-      {/* Dialog de confirmation de suppression */}
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={handleDeleteCancel}
-      >
-        <DialogTitle>تأكيد الحذف</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            هل أنت متأكد من حذف هذه المهمة؟
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleDeleteCancel}>إلغاء</Button>
-          <Button onClick={handleDeleteConfirm} color="error">
-            حذف
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Dialog pour l'impression */}
-      <Dialog
-        open={groupMissionDialogOpen}
-        onClose={() => {
-          setGroupMissionDialogOpen(false);
-          setSelectedEmployees([]);
-          setSelectedDestinations([]);
-          setDestinationInput('');
-          setSelectedTransportMode('');
-          setTransportModeInput('');
-          setSelectedMonth(null);
-          setMissionDates({ startDate: null, endDate: null });
-          setError(null);
-          setFormValid(false);
-          setShowValidationErrors(false);
-        }}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          إنشاء مهمة جماعية
-          <Typography variant="subtitle1" sx={{ mt: 1, color: 'text.secondary' }}>
-            عدد الموظفين المحددين: {selectedEmployees.length}
-          </Typography>
-        </DialogTitle>
-        <DialogContent sx={{ p: 3 }}>
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  label="شهر المهمة"
-                  value={selectedMonth}
-                  onChange={handleMonthChange}
-                  views={['month', 'year']}
-                  openTo="month"
-                  slotProps={{
-                    textField: {
-                      fullWidth: true,
-                      required: true,
-                      helperText: showValidationErrors && !selectedMonth ? 'يرجى تحديد شهر المهمة' : ''
-                    }
-                  }}
-                />
-              </LocalizationProvider>
-            </Grid>
-            <Grid item xs={12}>
-              <Autocomplete
-                multiple
-                options={[]}
-                freeSolo
-                value={selectedDestinations}
-                onChange={handleDestinationChange}
-                renderTags={(value, getTagProps) =>
-                  value.map((option, index) => (
-                    <Chip
-                      label={option}
-                      {...getTagProps({ index })}
-                      key={index}
-                    />
-                  ))
+          <Paper sx={{ mb: 2 }}>
+            <Tabs 
+              value={tabValue} 
+              onChange={handleTabChange} 
+              sx={{ 
+                borderBottom: 1, 
+                borderColor: 'divider',
+                '& .MuiTabs-flexContainer': {
+                  justifyContent: 'flex-end',
+                },
+                '& .MuiTab-root': {
+                  minWidth: 120,
+                  textAlign: 'right',
                 }
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="الوجهات"
-                    placeholder="أضف وجهة"
-                    required
-                    helperText={showValidationErrors && selectedDestinations.length === 0 ? 'يرجى تحديد وجهة واحدة على الأقل' : ''}
-                    value={destinationInput}
-                    onChange={(e) => handleInputTextChange(e, setDestinationInput)}
-                    onKeyDown={(e) => handleInputKeyDown(e, destinationInput, setDestinationInput, setSelectedDestinations, true)}
-                    onBlur={() => handleInputBlur(destinationInput, setDestinationInput, setSelectedDestinations, true)}
-                    inputProps={{
-                      ...params.inputProps,
-                      onPaste: (e) => handleInputPaste(e, setDestinationInput),
-                    }}
-                  />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <Autocomplete
-                freeSolo
-                options={transportModes}
-                value={selectedTransportMode}
-                onChange={handleTransportModeChange}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="وسيلة النقل"
-                    required
-                    helperText={showValidationErrors && (!selectedTransportMode || selectedTransportMode.trim() === '') ? 'يرجى تحديد وسيلة النقل' : ''}
-                    placeholder="أضف وسيلة نقل"
-                    value={transportModeInput}
-                    onChange={(e) => handleInputTextChange(e, setTransportModeInput)}
-                    onKeyDown={(e) => handleInputKeyDown(e, transportModeInput, setTransportModeInput, setSelectedTransportMode, false, transportModes)}
-                    onBlur={() => handleInputBlur(transportModeInput, setTransportModeInput, setSelectedTransportMode, false, transportModes)}
-                    inputProps={{
-                      ...params.inputProps,
-                      onPaste: (e) => handleInputPaste(e, setTransportModeInput),
-                    }}
-                  />
-                )}
-              />
-            </Grid>
-          </Grid>
-          {error && (
-            <Box sx={{ color: 'error.main', mt: 2 }}>
-              {error}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={handleCreateGroupMission}
-            variant="contained"
-            color="primary"
-            disabled={!formValid}
+              }}
+            >
+              <Tab label="المهام الشهرية" />
+              <Tab label="المهام" />
+            </Tabs>
+
+            {tabValue === 0 && renderEmployeesList()}
+            {tabValue === 1 && <MissionForm />}
+          </Paper>
+
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell align="right" sx={{ fontWeight: 'bold', width: '120px' }}>الإجراءات</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>الهاتف</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>النوع</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>تاريخ الانتهاء</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>تاريخ البدء</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>الوجهة</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>المركز</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>الوظيفة</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>الاسم</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>اللقب</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>رمز الموظف</TableCell>
+                  <TableCell 
+                    align="right" 
+                    onClick={() => handleSort('code_mission')}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    رمز المهمة {sortConfig.key === 'code_mission' && (
+                      <span>{sortConfig.direction === 'asc' ? ' ↑' : ' ↓'}</span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filteredMissions
+                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                  .map((mission) => (
+                    <TableRow key={mission._id}>
+                      <TableCell align="right">
+                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                          <Tooltip title="طباعة">
+                            <IconButton 
+                              size="small" 
+                              color="primary"
+                              onClick={() => {
+                                setSelectedMission(mission);
+                                setPrintDialogOpen(true);
+                              }}
+                            >
+                              <PrintIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="تعديل">
+                            <IconButton 
+                              size="small" 
+                              color="primary"
+                              onClick={() => handleOpenForm(mission)}
+                            >
+                              <EditIcon />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="حذف">
+                            <IconButton 
+                              size="small" 
+                              color="error"
+                              onClick={() => handleDeleteClick(mission)}
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      </TableCell>
+                      <TableCell align="right">{mission.employee.telephone || '-'}</TableCell>
+                      <TableCell align="right">{mission.type === 'monthly' ? 'شهرية' : 'خاصة'}</TableCell>
+                      <TableCell align="right">{formatGregorianDate(mission.endDate)}</TableCell>
+                      <TableCell align="right">{formatGregorianDate(mission.startDate)}</TableCell>
+                      <TableCell align="right">
+                        {Array.isArray(mission.destinations) && mission.destinations.length > 0 
+                          ? mission.destinations.map(dest => dest.name || dest).join('، ')
+                          : mission.destination || '-'}
+                      </TableCell>
+                      <TableCell align="right">{mission.employee.centre || '-'}</TableCell>
+                      <TableCell align="right">{mission.employee.poste || '-'}</TableCell>
+                      <TableCell align="right">{mission.employee.nom}</TableCell>
+                      <TableCell align="right">{mission.employee.prenom}</TableCell>
+                      <TableCell align="right">{mission.employee.matricule}</TableCell>
+                      <TableCell align="right">{mission.code_mission || '-'}</TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
+            </Table>
+            <TablePagination
+              component="div"
+              count={filteredMissions.length}
+              page={page}
+              onPageChange={handleChangePage}
+              rowsPerPage={rowsPerPage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+              rowsPerPageOptions={[5, 10, 25]}
+            />
+          </TableContainer>
+
+          {/* Dialog pour le formulaire de mission */}
+          <Dialog
+            open={formOpen}
+            onClose={handleCloseForm}
+            maxWidth="md"
+            fullWidth
           >
-            إنشاء المهمة
-          </Button>
-          <Button 
-            onClick={() => {
+            <DialogTitle>
+              {selectedMission ? 'تعديل المهمة' : 'مهمة جديدة'}
+            </DialogTitle>
+            <DialogContent>
+              <MissionForm
+                mission={selectedMission}
+                onSuccess={handleFormSuccess}
+                onClose={handleCloseForm}
+              />
+            </DialogContent>
+          </Dialog>
+
+          {/* Dialog de confirmation de suppression */}
+          <Dialog
+            open={deleteDialogOpen}
+            onClose={handleDeleteCancel}
+          >
+            <DialogTitle>تأكيد الحذف</DialogTitle>
+            <DialogContent>
+              <DialogContentText>
+                هل أنت متأكد من حذف هذه المهمة؟
+              </DialogContentText>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleDeleteCancel}>إلغاء</Button>
+              <Button onClick={handleDeleteConfirm} color="error">
+                حذف
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* Dialog pour l'impression de la mission */}
+          <Dialog
+            open={printDialogOpen}
+            onClose={() => setPrintDialogOpen(false)}
+            maxWidth="md"
+            fullWidth
+          >
+            <DialogContent>
+              {selectedMission && <MissionPrint mission={selectedMission} ref={printRef} />}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setPrintDialogOpen(false)}>إلغاء</Button>
+              <Button onClick={handlePrint} color="primary" variant="contained">
+                طباعة
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          {/* Dialog pour la création de mission groupée */}
+          <Dialog
+            open={groupMissionDialogOpen}
+            onClose={() => {
               setGroupMissionDialogOpen(false);
               setSelectedEmployees([]);
               setSelectedDestinations([]);
@@ -1209,14 +1039,135 @@ const Missions = () => {
               setFormValid(false);
               setShowValidationErrors(false);
             }}
-            variant="outlined"
-            color="error"
+            maxWidth="md"
+            fullWidth
           >
-            إلغاء
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+            <DialogTitle>
+              إنشاء مهمة جماعية
+              <Typography variant="subtitle1" sx={{ mt: 1, color: 'text.secondary' }}>
+                عدد الموظفين المحددين: {selectedEmployees.length}
+              </Typography>
+            </DialogTitle>
+            <DialogContent sx={{ p: 3 }}>
+              <Grid container spacing={3}>
+                <Grid item xs={12}>
+                  <LocalizationProvider dateAdapter={AdapterDateFns}>
+                    <DatePicker
+                      label="شهر المهمة"
+                      value={selectedMonth}
+                      onChange={handleMonthChange}
+                      views={['month', 'year']}
+                      openTo="month"
+                      slotProps={{
+                        textField: {
+                          fullWidth: true,
+                          required: true,
+                          helperText: showValidationErrors && !selectedMonth ? 'يرجى تحديد شهر المهمة' : ''
+                        }
+                      }}
+                    />
+                  </LocalizationProvider>
+                </Grid>
+                <Grid item xs={12}>
+                  <Autocomplete
+                    multiple
+                    options={[]}
+                    freeSolo
+                    value={selectedDestinations}
+                    onChange={handleDestinationChange}
+                    renderTags={(value, getTagProps) =>
+                      value.map((option, index) => (
+                        <Chip
+                          label={option}
+                          {...getTagProps({ index })}
+                          key={index}
+                        />
+                      ))
+                    }
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="الوجهات"
+                        placeholder="أضف وجهة"
+                        required
+                        helperText={showValidationErrors && selectedDestinations.length === 0 ? 'يرجى تحديد وجهة واحدة على الأقل' : ''}
+                        value={destinationInput}
+                        onChange={(e) => handleInputTextChange(e, setDestinationInput)}
+                        onKeyDown={(e) => handleInputKeyDown(e, destinationInput, setDestinationInput, setSelectedDestinations, true)}
+                        onBlur={() => handleInputBlur(destinationInput, setDestinationInput, setSelectedDestinations, true)}
+                        inputProps={{
+                          ...params.inputProps,
+                          onPaste: (e) => handleInputPaste(e, setDestinationInput),
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <Autocomplete
+                    freeSolo
+                    options={transportModes}
+                    value={selectedTransportMode}
+                    onChange={handleTransportModeChange}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="وسيلة النقل"
+                        required
+                        helperText={showValidationErrors && (!selectedTransportMode || selectedTransportMode.trim() === '') ? 'يرجى تحديد وسيلة النقل' : ''}
+                        placeholder="أضف وسيلة نقل"
+                        value={transportModeInput}
+                        onChange={(e) => handleInputTextChange(e, setTransportModeInput)}
+                        onKeyDown={(e) => handleInputKeyDown(e, transportModeInput, setTransportModeInput, setSelectedTransportMode, false, transportModes)}
+                        onBlur={() => handleInputBlur(transportModeInput, setTransportModeInput, setSelectedTransportMode, false, transportModes)}
+                        inputProps={{
+                          ...params.inputProps,
+                          onPaste: (e) => handleInputPaste(e, setTransportModeInput),
+                        }}
+                      />
+                    )}
+                  />
+                </Grid>
+              </Grid>
+              {error && (
+                <Box sx={{ color: 'error.main', mt: 2 }}>
+                  {error}
+                </Box>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button
+                onClick={handleCreateGroupMission}
+                variant="contained"
+                color="primary"
+                disabled={!formValid}
+              >
+                إنشاء المهمة
+              </Button>
+              <Button 
+                onClick={() => {
+                  setGroupMissionDialogOpen(false);
+                  setSelectedEmployees([]);
+                  setSelectedDestinations([]);
+                  setDestinationInput('');
+                  setSelectedTransportMode('');
+                  setTransportModeInput('');
+                  setSelectedMonth(null);
+                  setMissionDates({ startDate: null, endDate: null });
+                  setError(null);
+                  setFormValid(false);
+                  setShowValidationErrors(false);
+                }}
+                variant="outlined"
+                color="error"
+              >
+                إلغاء
+              </Button>
+            </DialogActions>
+          </Dialog>
+        </Box>
+      </Box>
+    </LocalizationProvider>
   );
 };
 
