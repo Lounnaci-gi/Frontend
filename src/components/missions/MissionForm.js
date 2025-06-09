@@ -21,6 +21,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import axiosInstance from '../../config/axios';
+import MonthPicker from './MonthPicker';
 
 // Fonction utilitaire pour formater les dates en grégorien
 const formatGregorianDate = (date) => {
@@ -52,17 +53,48 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
     return { start, end };
   };
 
-  // Gestionnaire de changement de mois pour les missions mensuelles
+  // Ajout de la fonction de validation des dates
+  const isDateInAllowedRange = (date) => {
+    const today = new Date();
+    const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    const selectedDate = new Date(date.getFullYear(), date.getMonth(), 1);
+
+    return selectedDate >= currentMonth && selectedDate <= nextMonth;
+  };
+
+  // Modification du gestionnaire de changement de mois
   const handleMonthChange = (date) => {
-    if (date) {
-      const { start, end } = getMonthStartAndEnd(date);
+    if (!date) {
       setFormData(prev => ({
         ...prev,
-        selectedMonth: date,
-        startDate: start,
-        endDate: end
+        selectedMonth: null,
+        startDate: null,
+        endDate: null
       }));
+      setError(null);
+      return;
     }
+
+    if (!isDateInAllowedRange(date)) {
+      setError('يمكن إنشاء المهام الشهرية فقط للشهر الحالي أو الشهر القادم');
+      setFormData(prev => ({
+        ...prev,
+        selectedMonth: null,
+        startDate: null,
+        endDate: null
+      }));
+      return;
+    }
+
+    const { start, end } = getMonthStartAndEnd(date);
+    setFormData(prev => ({
+      ...prev,
+      selectedMonth: date,
+      startDate: start,
+      endDate: end
+    }));
+    setError(null);
   };
 
   // Gestionnaire de changement de type de mission
@@ -138,13 +170,38 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
     });
   };
 
-  // Gestionnaire de soumission du formulaire
+  // Ajout de la fonction de vérification des missions existantes
+  const hasExistingMonthlyMission = (employeeId, selectedMonth) => {
+    if (!selectedMonth) return false;
+    
+    const monthStart = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
+    const monthEnd = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0);
+    
+    return missions.some(mission => 
+      mission.type === 'monthly' &&
+      mission.employee === employeeId &&
+      new Date(mission.startDate) >= monthStart &&
+      new Date(mission.endDate) <= monthEnd &&
+      mission._id !== (mission?._id) // Exclure la mission en cours d'édition
+    );
+  };
+
+  // Modification du gestionnaire de soumission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
     try {
+      // Vérifier si l'employé a déjà une mission mensuelle pour ce mois
+      if (formData.type === 'monthly' && formData.employeeId && formData.selectedMonth) {
+        if (hasExistingMonthlyMission(formData.employeeId, formData.selectedMonth)) {
+          setError('هذا الموظف لديه بالفعل مهمة شهرية لهذا الشهر');
+          setLoading(false);
+          return;
+        }
+      }
+
       const missionData = {
         ...formData,
         startDate: formData.startDate.toISOString(),
@@ -249,25 +306,21 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
               </FormControl>
             </Grid>
             {formData.type === 'monthly' ? (
-              <Grid item xs={12} sm={6}>
-                <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ar}>
-                  <DatePicker
-                    label="شهر المهمة"
-                    value={formData.selectedMonth}
-                    onChange={handleMonthChange}
-                    views={['month', 'year']}
-                    openTo="month"
-                    format="MM/yyyy"
-                    slotProps={{
-                      textField: {
-                        fullWidth: true,
-                        helperText: formData.selectedMonth ? 
-                          `من ${formatGregorianDate(formData.startDate)} إلى ${formatGregorianDate(formData.endDate)}` : 
-                          ''
-                      }
-                    }}
-                  />
-                </LocalizationProvider>
+              <Grid item xs={12}>
+                <MonthPicker
+                  value={formData.selectedMonth}
+                  onChange={(date, error) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      selectedMonth: date,
+                      startDate: date ? new Date(date.getFullYear(), date.getMonth(), 1) : null,
+                      endDate: date ? new Date(date.getFullYear(), date.getMonth() + 1, 0) : null
+                    }));
+                    setError(error);
+                  }}
+                  error={error}
+                  showValidationErrors={true}
+                />
               </Grid>
             ) : (
               <>

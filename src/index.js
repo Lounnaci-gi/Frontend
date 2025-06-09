@@ -1,9 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { Provider } from 'react-redux';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ToastContainer } from 'react-toastify';
+import { ErrorBoundary } from 'react-error-boundary';
 import { store } from './store';
 import App from './App';
 import './index.css';
+import 'react-toastify/dist/ReactToastify.css';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import reportWebVitals from './reportWebVitals';
 
@@ -13,12 +17,47 @@ link.href = 'https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700
 link.rel = 'stylesheet';
 document.head.appendChild(link);
 
+// Configuration de React Query
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
+
+// Composant de fallback pour ErrorBoundary
+const ErrorFallback = ({ error }) => {
+  return (
+    <div role="alert" style={{ padding: '20px', textAlign: 'center' }}>
+      <h2>Une erreur est survenue :</h2>
+      <pre style={{ color: 'red' }}>{error.message}</pre>
+    </div>
+  );
+};
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <Provider store={store}>
-      <App />
-    </Provider>
+    <ErrorBoundary FallbackComponent={ErrorFallback}>
+      <QueryClientProvider client={queryClient}>
+        <Provider store={store}>
+          <App />
+          <ToastContainer
+            position="top-right"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+          />
+        </Provider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   </React.StrictMode>
 );
 

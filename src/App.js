@@ -9,6 +9,10 @@ import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import arLocale from 'date-fns/locale/ar-SA';
 import { useSelector } from 'react-redux';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './config/queryClient';
+import { AppErrorBoundary } from './components/ErrorBoundary';
+import { Toast } from './components/Toast';
 
 // Composants chargés paresseusement
 const MainLayout = lazy(() => import('./components/layout/MainLayout'));
@@ -163,14 +167,19 @@ const RouterWithFutureFlags = () => {
 
 function App() {
   return (
-    <CacheProvider value={cacheRtl}>
-      <ThemeProvider theme={theme}>
-        <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={arLocale}>
-          <CssBaseline />
-          <RouterWithFutureFlags />
-        </LocalizationProvider>
-      </ThemeProvider>
-    </CacheProvider>
+    <AppErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <CacheProvider value={cacheRtl}>
+          <ThemeProvider theme={theme}>
+            <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={arLocale}>
+              <CssBaseline />
+              <RouterWithFutureFlags />
+              <Toast />
+            </LocalizationProvider>
+          </ThemeProvider>
+        </CacheProvider>
+      </QueryClientProvider>
+    </AppErrorBoundary>
   );
 }
 

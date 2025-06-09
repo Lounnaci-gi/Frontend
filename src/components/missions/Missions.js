@@ -58,6 +58,7 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { useReactToPrint } from 'react-to-print';
 import MissionPrint from './MissionPrint';
+import MonthPicker from './MonthPicker';
 
 // Fonction utilitaire pour formater les dates en grégorien
 const formatGregorianDate = (date) => {
@@ -183,7 +184,9 @@ const Missions = () => {
 
   const filteredEmployees = useMemo(() => {
     return employees.filter(employee => {
-      const matchesCentre = selectedCentre === 'all' || employee.centre === selectedCentre;
+      const matchesCentre = selectedCentre === 'all' || 
+        (employee.centre && employee.centre.trim() === selectedCentre.trim());
+      
       const searchTermLower = searchTerm.toLowerCase();
       const matchesSearch = !searchTerm || 
         employee.nom?.toLowerCase().includes(searchTermLower) ||
@@ -323,18 +326,37 @@ const Missions = () => {
     return { start, end };
   };
 
+  // Ajout de la fonction de validation des dates
+  const isDateInAllowedRange = (date) => {
+    const today = new Date();
+    const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    const selectedDate = new Date(date.getFullYear(), date.getMonth(), 1);
+
+    return selectedDate >= currentMonth && selectedDate <= nextMonth;
+  };
+
   const handleMonthChange = (date) => {
-    if (date) {
-      const { start, end } = getMonthStartAndEnd(date);
-      setSelectedMonth(date);
-      setMissionDates({
-        startDate: start,
-        endDate: end
-      });
-    } else {
+    if (!date) {
       setSelectedMonth(null);
       setMissionDates({ startDate: null, endDate: null });
+      setError(null);
+      return;
     }
+
+    if (!isDateInAllowedRange(date)) {
+      setError('يمكن إنشاء المهام الشهرية فقط للشهر الحالي أو الشهر القادم');
+      setSelectedMonth(null);
+      setMissionDates({ startDate: null, endDate: null });
+      return;
+    }
+
+    const startDate = new Date(date.getFullYear(), date.getMonth(), 1);
+    const endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    
+    setSelectedMonth(date);
+    setMissionDates({ startDate, endDate });
+    setError(null);
   };
 
   // Fonction pour générer un code de mission séquentiel
@@ -343,31 +365,42 @@ const Missions = () => {
     return `${paddedSequence}/${missionYear}`;
   };
 
+  // Ajout de la fonction de vérification des missions existantes
+  const hasExistingMonthlyMission = (employeeId) => {
+    const today = new Date();
+    const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+
+    return missions.some(mission => 
+      mission.type === 'monthly' &&
+      mission.status === 'active' &&
+      mission.employee._id === employeeId &&
+      new Date(mission.startDate) >= currentMonth &&
+      new Date(mission.endDate) <= nextMonth
+    );
+  };
+
+  // Modification de la fonction handleCreateGroupMission
   const handleCreateGroupMission = async () => {
-    setShowValidationErrors(true);
+    if (!formValid) {
+      setShowValidationErrors(true);
+      return;
+    }
+
     try {
-      if (!formValid) {
-        setError('يرجى ملء جميع الحقول المطلوبة');
-        return;
-      }
+      setLoading(true);
+      setError(null);
 
-      if (!missionDates.startDate || !missionDates.endDate) {
-        setError('يرجى تحديد شهر المهمة');
-        return;
-      }
+      // Vérifier les missions existantes pour chaque employé
+      const employeesWithExistingMissions = selectedEmployees.filter(employee => 
+        hasExistingMonthlyMission(employee._id)
+      );
 
-      if (selectedEmployees.length === 0) {
-        setError('يرجى تحديد موظف واحد على الأقل');
-        return;
-      }
-
-      if (selectedDestinations.length === 0) {
-        setError('يرجى تحديد وجهة واحدة على الأقل');
-        return;
-      }
-
-      if (!selectedTransportMode || selectedTransportMode.trim() === '') {
-        setError('يرجى تحديد وسيلة النقل');
+      if (employeesWithExistingMissions.length > 0) {
+        const employeeNames = employeesWithExistingMissions
+          .map(emp => `${emp.nom} ${emp.prenom}`)
+          .join(', ');
+        setError(`الموظفون التاليون لديهم بالفعل مهمة شهرية لهذا الشهر: ${employeeNames}`);
         return;
       }
 
@@ -394,80 +427,45 @@ const Missions = () => {
           updatedAt: new Date().toISOString()
         };
 
-        console.log('Données de mission à créer:', {
-          employeeId: missionData.employee,
-          employeeInfo: {
-            matricule: employee.matricule,
-            nom: employee.nom,
-            prenom: employee.prenom,
-            centre: employee.centre,
-            fonction: employee.poste
-          },
-          destinations: missionData.destinations,
-          dates: {
-            start: formatGregorianDate(missionData.startDate),
-            end: formatGregorianDate(missionData.endDate)
-          },
-          transportMode: missionData.transportMode
-        });
-
         return missionData;
       });
 
-      try {
-        // Créer les missions une par une pour éviter les conflits
-        const createdMissions = [];
-        for (const missionData of missionsToCreate) {
-          try {
-            const response = await axiosInstance.post('/missions', missionData);
-            createdMissions.push(response.data);
-          } catch (error) {
-            console.error('Erreur lors de la création de la mission:', {
-              missionData,
-              error: error.response?.data || error.message
-            });
-            throw error;
-          }
+      // Créer les missions une par une
+      const createdMissions = [];
+      for (const missionData of missionsToCreate) {
+        try {
+          const response = await axiosInstance.post('/missions', missionData);
+          createdMissions.push(response.data);
+        } catch (error) {
+          console.error('Erreur lors de la création de la mission:', {
+            missionData,
+            error: error.response?.data || error.message
+          });
+          throw error;
         }
+      }
 
-        if (createdMissions.length > 0) {
-          setGroupMissionDialogOpen(false);
-          setSelectedEmployees([]);
-          setSelectedDestinations([]);
-          setDestinationInput('');
-          setSelectedTransportMode('');
-          setTransportModeInput('');
-          setSelectedMonth(null);
-          setMissionDates({ startDate: null, endDate: null });
-          setError(null);
-          setFormValid(false);
-          setShowValidationErrors(false);
-          
-          dispatch(fetchMissionsStart());
-          const missionsResponse = await axiosInstance.get('/missions');
-          dispatch(fetchMissionsSuccess(missionsResponse.data));
-        }
-      } catch (error) {
-        let errorMessage = 'Une erreur est survenue lors de la création de la mission';
+      if (createdMissions.length > 0) {
+        setGroupMissionDialogOpen(false);
+        setSelectedEmployees([]);
+        setSelectedDestinations([]);
+        setDestinationInput('');
+        setSelectedTransportMode('');
+        setTransportModeInput('');
+        setSelectedMonth(null);
+        setMissionDates({ startDate: null, endDate: null });
+        setError(null);
+        setFormValid(false);
+        setShowValidationErrors(false);
         
-        if (error.response?.data?.message) {
-          errorMessage = error.response.data.message;
-        } else if (error.response?.status === 400) {
-          if (error.response?.data?.errors) {
-            const validationErrors = error.response.data.errors;
-            errorMessage = Object.entries(validationErrors)
-              .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
-              .join('\n');
-          } else {
-            errorMessage = 'البيانات المدخلة غير صحيحة';
-          }
-        }
-        
-        setError(errorMessage);
+        dispatch(fetchMissionsStart());
+        const missionsResponse = await axiosInstance.get('/missions');
+        dispatch(fetchMissionsSuccess(missionsResponse.data));
       }
     } catch (error) {
-      console.error('Erreur inattendue:', error);
-      setError('حدث خطأ غير متوقع');
+      setError(error.response?.data?.message || 'Une erreur est survenue lors de la création des missions');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -674,7 +672,7 @@ const Missions = () => {
                   selectedEmployees.some(selected => selected._id === emp._id)
                 ) ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
               </Button>
-              <Typography variant="body2" color="text.secondary">
+              <Typography>
                 {selectedEmployees.length} موظف محدد
               </Typography>
             </Box>
@@ -719,17 +717,18 @@ const Missions = () => {
           </Box>
         </Paper>
 
-        <Paper sx={{ mt: 2 }}>
-          <List sx={{ px: 3, mx: 0 }}>
-            {filteredEmployees.length > 0 ? (
-              filteredEmployees
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map((employee, index) => (
+        <List sx={{ px: 3, mx: 0 }}>
+          {filteredEmployees.length > 0 ? (
+            filteredEmployees
+              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+              .map((employee, index) => {
+                const hasMission = hasExistingMonthlyMission(employee._id);
+                return (
                   <React.Fragment key={employee._id}>
                     <ListItem
                       sx={{
                         '&:hover': {
-                          bgcolor: 'action.hover',
+                          bgcolor: hasMission ? 'action.disabledBackground' : 'action.hover',
                         },
                         flexDirection: 'row-reverse',
                         display: 'flex',
@@ -737,7 +736,8 @@ const Missions = () => {
                         gap: 2,
                         justifyContent: 'flex-start',
                         px: 0,
-                        mx: 0
+                        mx: 0,
+                        opacity: hasMission ? 0.7 : 1
                       }}
                     >
                       <Box sx={{ width: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
@@ -745,10 +745,11 @@ const Missions = () => {
                           edge="end"
                           checked={selectedEmployees.some(emp => emp._id === employee._id)}
                           onChange={() => handleEmployeeSelect(employee)}
+                          disabled={hasMission}
                         />
                       </Box>
                       <ListItemIcon sx={{ width: '40px', minWidth: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                        <PersonIcon color="primary" />
+                        <PersonIcon color={hasMission ? "disabled" : "primary"} />
                       </ListItemIcon>
                       <Typography sx={{ 
                         width: '80px', 
@@ -758,7 +759,7 @@ const Missions = () => {
                       }}>
                         {employee.matricule}
                       </Typography>
-                      <Box sx={{ width: '200px', textAlign: 'right', px: 0, pr: 2 }}>
+                      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
                         <Typography sx={{ fontWeight: 'medium' }}>
                           {`${employee.nom} ${employee.prenom}`}
                         </Typography>
@@ -781,37 +782,34 @@ const Missions = () => {
                         {employee.telephone || '-'}
                       </Typography>
                       <Box sx={{ width: '80px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                        <Chip
-                          label="نشط"
-                          color="success"
-                          size="small"
-                        />
+                        {hasMission ? (
+                          <Chip
+                            label="مهمة شهرية جارية"
+                            color="warning"
+                            size="small"
+                          />
+                        ) : (
+                          <Chip
+                            label="نشط"
+                            color="success"
+                            size="small"
+                          />
+                        )}
                       </Box>
                     </ListItem>
                     {index < filteredEmployees.length - 1 && <Divider />}
                   </React.Fragment>
-                ))
-            ) : (
-              <ListItem>
-                <ListItemText 
-                  primary="لا يوجد موظفون نشطين في هذه الفئة"
-                  sx={{ textAlign: 'center' }}
-                />
-              </ListItem>
-            )}
-          </List>
-          <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
-            component="div"
-            count={filteredEmployees.length}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-            labelRowsPerPage="عدد الصفوف في الصفحة"
-            labelDisplayedRows={({ from, to, count }) => `${from}-${to} من ${count}`}
-          />
-        </Paper>
+                );
+              })
+          ) : (
+            <ListItem>
+              <ListItemText 
+                primary="لا يوجد موظفون نشطين في هذه الفئة"
+                sx={{ textAlign: 'center' }}
+              />
+            </ListItem>
+          )}
+        </List>
       </>
     );
   };
@@ -869,103 +867,105 @@ const Missions = () => {
             </Tabs>
 
             {tabValue === 0 && renderEmployeesList()}
-            {tabValue === 1 && <MissionForm />}
+            {tabValue === 1 && (
+              <>
+                <TableContainer component={Paper}>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell align="right" sx={{ fontWeight: 'bold', width: '120px' }}>الإجراءات</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>الهاتف</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>النوع</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>تاريخ الانتهاء</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>تاريخ البدء</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>الوجهة</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>المركز</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>الوظيفة</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>الاسم</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>اللقب</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>رمز الموظف</TableCell>
+                        <TableCell 
+                          align="right" 
+                          onClick={() => handleSort('code_mission')}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          رمز المهمة {sortConfig.key === 'code_mission' && (
+                          <span>{sortConfig.direction === 'asc' ? ' ↑' : ' ↓'}</span>
+                        )}
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {filteredMissions
+                        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                        .map((mission) => (
+                          <TableRow key={mission._id}>
+                            <TableCell align="right">
+                              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                                <Tooltip title="طباعة">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => {
+                                      setSelectedMission(mission);
+                                      setPrintDialogOpen(true);
+                                    }}
+                                  >
+                                    <PrintIcon />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="تعديل">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleOpenForm(mission)}
+                                  >
+                                    <EditIcon />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="حذف">
+                                  <IconButton 
+                                    size="small" 
+                                    color="error"
+                                    onClick={() => handleDeleteClick(mission)}
+                                  >
+                                    <DeleteIcon />
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
+                            </TableCell>
+                            <TableCell align="right">{mission.employee?.telephone || '-'}</TableCell>
+                            <TableCell align="right">{mission.type === 'monthly' ? 'شهرية' : 'خاصة'}</TableCell>
+                            <TableCell align="right">{formatGregorianDate(mission.endDate)}</TableCell>
+                            <TableCell align="right">{formatGregorianDate(mission.startDate)}</TableCell>
+                            <TableCell align="right">
+                              {Array.isArray(mission.destinations) && mission.destinations.length > 0 
+                                ? mission.destinations.map(dest => dest.name || dest).join('، ')
+                                : mission.destination || '-'}
+                            </TableCell>
+                            <TableCell align="right">{mission.employee?.centre || '-'}</TableCell>
+                            <TableCell align="right">{mission.employee?.poste || '-'}</TableCell>
+                            <TableCell align="right">{mission.employee?.nom}</TableCell>
+                            <TableCell align="right">{mission.employee?.prenom}</TableCell>
+                            <TableCell align="right">{mission.employee?.matricule}</TableCell>
+                            <TableCell align="right">{mission.code_mission || '-'}</TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                  <TablePagination
+                    component="div"
+                    count={filteredMissions.length}
+                    page={page}
+                    onPageChange={handleChangePage}
+                    rowsPerPage={rowsPerPage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                    rowsPerPageOptions={[5, 10, 25]}
+                  />
+                </TableContainer>
+              </>
+            )}
           </Paper>
-
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell align="right" sx={{ fontWeight: 'bold', width: '120px' }}>الإجراءات</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>الهاتف</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>النوع</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>تاريخ الانتهاء</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>تاريخ البدء</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>الوجهة</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>المركز</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>الوظيفة</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>الاسم</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>اللقب</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>رمز الموظف</TableCell>
-                  <TableCell 
-                    align="right" 
-                    onClick={() => handleSort('code_mission')}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    رمز المهمة {sortConfig.key === 'code_mission' && (
-                      <span>{sortConfig.direction === 'asc' ? ' ↑' : ' ↓'}</span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredMissions
-                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((mission) => (
-                    <TableRow key={mission._id}>
-                      <TableCell align="right">
-                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                          <Tooltip title="طباعة">
-                            <IconButton 
-                              size="small" 
-                              color="primary"
-                              onClick={() => {
-                                setSelectedMission(mission);
-                                setPrintDialogOpen(true);
-                              }}
-                            >
-                              <PrintIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="تعديل">
-                            <IconButton 
-                              size="small" 
-                              color="primary"
-                              onClick={() => handleOpenForm(mission)}
-                            >
-                              <EditIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="حذف">
-                            <IconButton 
-                              size="small" 
-                              color="error"
-                              onClick={() => handleDeleteClick(mission)}
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
-                      </TableCell>
-                      <TableCell align="right">{mission.employee.telephone || '-'}</TableCell>
-                      <TableCell align="right">{mission.type === 'monthly' ? 'شهرية' : 'خاصة'}</TableCell>
-                      <TableCell align="right">{formatGregorianDate(mission.endDate)}</TableCell>
-                      <TableCell align="right">{formatGregorianDate(mission.startDate)}</TableCell>
-                      <TableCell align="right">
-                        {Array.isArray(mission.destinations) && mission.destinations.length > 0 
-                          ? mission.destinations.map(dest => dest.name || dest).join('، ')
-                          : mission.destination || '-'}
-                      </TableCell>
-                      <TableCell align="right">{mission.employee.centre || '-'}</TableCell>
-                      <TableCell align="right">{mission.employee.poste || '-'}</TableCell>
-                      <TableCell align="right">{mission.employee.nom}</TableCell>
-                      <TableCell align="right">{mission.employee.prenom}</TableCell>
-                      <TableCell align="right">{mission.employee.matricule}</TableCell>
-                      <TableCell align="right">{mission.code_mission || '-'}</TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-            <TablePagination
-              component="div"
-              count={filteredMissions.length}
-              page={page}
-              onPageChange={handleChangePage}
-              rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-              rowsPerPageOptions={[5, 10, 25]}
-            />
-          </TableContainer>
 
           {/* Dialog pour le formulaire de mission */}
           <Dialog
@@ -1051,22 +1051,22 @@ const Missions = () => {
             <DialogContent sx={{ p: 3 }}>
               <Grid container spacing={3}>
                 <Grid item xs={12}>
-                  <LocalizationProvider dateAdapter={AdapterDateFns}>
-                    <DatePicker
-                      label="شهر المهمة"
-                      value={selectedMonth}
-                      onChange={handleMonthChange}
-                      views={['month', 'year']}
-                      openTo="month"
-                      slotProps={{
-                        textField: {
-                          fullWidth: true,
-                          required: true,
-                          helperText: showValidationErrors && !selectedMonth ? 'يرجى تحديد شهر المهمة' : ''
-                        }
-                      }}
-                    />
-                  </LocalizationProvider>
+                  <MonthPicker
+                    value={selectedMonth}
+                    onChange={(date, error) => {
+                      setSelectedMonth(date);
+                      setError(error);
+                      if (date) {
+                        const startDate = new Date(date.getFullYear(), date.getMonth(), 1);
+                        const endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+                        setMissionDates({ startDate, endDate });
+                      } else {
+                        setMissionDates({ startDate: null, endDate: null });
+                      }
+                    }}
+                    error={error}
+                    showValidationErrors={showValidationErrors}
+                  />
                 </Grid>
                 <Grid item xs={12}>
                   <Autocomplete
