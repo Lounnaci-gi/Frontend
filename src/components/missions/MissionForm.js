@@ -88,6 +88,42 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
     });
   };
 
+  // Fonction pour vérifier les missions mensuelles existantes
+  const checkExistingMonthlyMission = async (employeeId, startDate, endDate) => {
+    if (!employeeId || !startDate || !endDate) return null;
+    
+    try {
+      const startOfMonth = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+      const endOfMonth = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 0);
+      
+      const response = await axiosInstance.get('/missions', {
+        params: {
+          employee: employeeId,
+          type: 'monthly',
+          startDate: startOfMonth.toISOString(),
+          endDate: endOfMonth.toISOString()
+        }
+      });
+      
+      // Filtrer les missions qui se chevauchent avec le mois
+      const conflictingMissions = response.data.filter(mission => {
+        const missionStart = new Date(mission.startDate);
+        const missionEnd = new Date(mission.endDate);
+        
+        return (
+          (missionStart >= startOfMonth && missionStart <= endOfMonth) ||
+          (missionEnd >= startOfMonth && missionEnd <= endOfMonth) ||
+          (missionStart <= startOfMonth && missionEnd >= endOfMonth)
+        );
+      });
+      
+      return conflictingMissions.length > 0 ? conflictingMissions[0] : null;
+    } catch (error) {
+      console.error('Erreur lors de la vérification des missions existantes:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
@@ -131,6 +167,28 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
     }
   }, [open, mission]);
 
+  // Vérifier les missions existantes quand l'employé ou le mois change
+  useEffect(() => {
+    const validateExistingMission = async () => {
+      if (formData.type === 'monthly' && formData.employeeId && formData.startDate && formData.endDate) {
+        const existingMission = await checkExistingMonthlyMission(
+          formData.employeeId,
+          formData.startDate,
+          formData.endDate
+        );
+        
+        if (existingMission && (!mission || existingMission._id !== mission._id)) {
+          const monthName = formData.startDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+          setError(`L'employé a déjà une mission mensuelle pour ${monthName}`);
+        } else {
+          setError(null);
+        }
+      }
+    };
+
+    validateExistingMission();
+  }, [formData.employeeId, formData.startDate, formData.endDate, formData.type, mission]);
+
   const handleChange = (field) => (event) => {
     setFormData({
       ...formData,
@@ -145,6 +203,22 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
     setError(null);
 
     try {
+      // Validation pour les missions mensuelles
+      if (formData.type === 'monthly' && formData.employeeId && formData.startDate && formData.endDate) {
+        const existingMission = await checkExistingMonthlyMission(
+          formData.employeeId, 
+          formData.startDate, 
+          formData.endDate
+        );
+        
+        if (existingMission && (!mission || existingMission._id !== mission._id)) {
+          const monthName = formData.startDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+          setError(`L'employé a déjà une mission mensuelle pour ${monthName}`);
+          setLoading(false);
+          return;
+        }
+      }
+
       const missionData = {
         ...formData,
         startDate: formData.startDate.toISOString(),
@@ -163,7 +237,13 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
       handleClose();
     } catch (error) {
       console.error('Erreur lors de la sauvegarde de la mission:', error);
-      setError(error.response?.data?.message || 'Une erreur est survenue');
+      
+      // Gestion spécifique des erreurs de validation
+      if (error.response?.data?.code === 'MONTHLY_MISSION_EXISTS') {
+        setError(error.response.data.message);
+      } else {
+        setError(error.response?.data?.message || 'Une erreur est survenue');
+      }
     } finally {
       setLoading(false);
     }

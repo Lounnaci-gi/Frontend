@@ -145,6 +145,46 @@ missionSchema.pre('validate', async function(next) {
   }
 });
 
+// Validation personnalisée pour vérifier qu'un employé n'a qu'une seule mission mensuelle par mois
+missionSchema.pre('save', async function(next) {
+  try {
+    // Vérifier seulement pour les missions mensuelles
+    if (this.type === 'monthly' && this.employee && this.startDate && this.endDate) {
+      // Calculer le début et la fin du mois
+      const startOfMonth = new Date(this.startDate.getFullYear(), this.startDate.getMonth(), 1);
+      const endOfMonth = new Date(this.startDate.getFullYear(), this.startDate.getMonth() + 1, 0);
+      
+      // Rechercher les missions existantes pour cet employé dans le même mois
+      const existingMission = await mongoose.model('Mission').findOne({
+        employee: this.employee,
+        type: 'monthly',
+        status: { $in: ['active', 'completed'] }, // Vérifier seulement les missions actives ou complétées
+        _id: { $ne: this._id }, // Exclure la mission actuelle si c'est une mise à jour
+        $or: [
+          // Mission qui commence dans le mois
+          { startDate: { $gte: startOfMonth, $lte: endOfMonth } },
+          // Mission qui se termine dans le mois
+          { endDate: { $gte: startOfMonth, $lte: endOfMonth } },
+          // Mission qui couvre tout le mois
+          { 
+            startDate: { $lte: startOfMonth },
+            endDate: { $gte: endOfMonth }
+          }
+        ]
+      });
+      
+      if (existingMission) {
+        const monthName = this.startDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+        throw new Error(`L'employé a déjà une mission mensuelle pour ${monthName}`);
+      }
+    }
+    
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 // Middleware pour mettre à jour updatedAt
 missionSchema.pre('save', function(next) {
   this.updatedAt = Date.now();

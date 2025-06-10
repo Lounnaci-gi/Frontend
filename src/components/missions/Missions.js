@@ -113,6 +113,7 @@ const Missions = () => {
   const [destinationInput, setDestinationInput] = useState('');
   const [showCreateMissionButton, setShowCreateMissionButton] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: 'code_mission', direction: 'asc' });
+  const [employeesWithExistingMissions, setEmployeesWithExistingMissions] = useState([]);
 
   // États pour les dialogues
   const [formOpen, setFormOpen] = useState(false);
@@ -195,6 +196,56 @@ const Missions = () => {
       return matchesCentre && matchesSearch;
     });
   }, [employees, selectedCentre, searchTerm]);
+
+  // Mise à jour de l'état du bouton de création de mission
+  useEffect(() => {
+    setShowCreateMissionButton(selectedEmployees.length > 0);
+  }, [selectedEmployees]);
+
+  // Effet pour forcer la mise à jour de l'interface quand les missions existantes changent
+  useEffect(() => {
+    console.log('🔄 Mise à jour de l\'interface - Employés avec missions existantes:', employeesWithExistingMissions.length);
+    console.log('📋 Liste des employés avec missions:', employeesWithExistingMissions.map(emp => `${emp.nom} ${emp.prenom}`));
+  }, [employeesWithExistingMissions]);
+
+  const getEmployeeStatus = (employee) => {
+    const hasExistingMission = employeesWithExistingMissions.some(emp => emp._id === employee._id);
+    const isSelected = selectedEmployees.some(emp => emp._id === employee._id);
+    
+    // Log de débogage pour les employés avec missions existantes
+    if (hasExistingMission) {
+      console.log(`🔍 ${employee.nom} ${employee.prenom} a une mission existante - selectable: false`);
+    }
+    
+    if (hasExistingMission) {
+      return {
+        status: 'existing_mission',
+        label: 'مهمة موجودة',
+        color: 'warning',
+        selectable: false,
+        backgroundColor: 'rgba(255, 193, 7, 0.1)',
+        textColor: 'text.disabled'
+      };
+    } else if (isSelected) {
+      return {
+        status: 'selected',
+        label: 'محدد',
+        color: 'success',
+        selectable: true,
+        backgroundColor: 'rgba(76, 175, 80, 0.1)',
+        textColor: 'text.primary'
+      };
+    } else {
+      return {
+        status: 'available',
+        label: 'متاح',
+        color: 'primary',
+        selectable: true,
+        backgroundColor: 'transparent',
+        textColor: 'text.primary'
+      };
+    }
+  };
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -281,39 +332,56 @@ const Missions = () => {
   };
 
   const handleEmployeeSelect = (employee) => {
-    setSelectedEmployees(prev => {
-      const isSelected = prev.some(emp => emp._id === employee._id);
-      const newSelection = isSelected 
-        ? prev.filter(emp => emp._id !== employee._id)
-        : [...prev, employee];
-      
-      // Mettre à jour l'état du bouton en fonction de la sélection
-      setShowCreateMissionButton(newSelection.length > 0);
-      
-      return newSelection;
-    });
+    console.log(`\n🎯 Tentative de sélection de ${employee.nom} ${employee.prenom} (${employee.matricule})`);
+    
+    const employeeStatus = getEmployeeStatus(employee);
+    console.log(`📊 Statut de l'employé:`, employeeStatus);
+    
+    // Si l'employé n'est pas sélectionnable, ne rien faire
+    if (!employeeStatus.selectable) {
+      const monthName = missionDates.startDate?.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) || 'ce mois';
+      const errorMsg = `${employee.nom} ${employee.prenom} a déjà une mission mensuelle pour ${monthName}`;
+      setError(errorMsg);
+      console.log('❌ Employé non sélectionnable - mission existante:', errorMsg);
+      return;
+    }
+    
+    // Vérifier si l'employé est déjà sélectionné
+    const isAlreadySelected = selectedEmployees.some(emp => emp._id === employee._id);
+    console.log(`🔍 Employé déjà sélectionné: ${isAlreadySelected}`);
+    
+    if (isAlreadySelected) {
+      setSelectedEmployees(prev => prev.filter(emp => emp._id !== employee._id));
+      console.log('✅ Employé désélectionné:', employee.nom, employee.prenom);
+    } else {
+      setSelectedEmployees(prev => [...prev, employee]);
+      setError(null);
+      console.log('✅ Employé sélectionné:', employee.nom, employee.prenom);
+    }
+    
+    console.log(`📋 Nombre total d'employés sélectionnés: ${selectedEmployees.length + (isAlreadySelected ? -1 : 1)}`);
   };
 
   const handleSelectAll = () => {
-    const allSelected = filteredEmployees.every(emp => 
+    const availableEmployees = filteredEmployees.filter(emp => getEmployeeStatus(emp).selectable);
+    const allAvailableSelected = availableEmployees.every(emp => 
       selectedEmployees.some(selected => selected._id === emp._id)
     );
 
-    if (allSelected) {
-      setSelectedEmployees(prev => {
-        const newSelection = prev.filter(emp => !filteredEmployees.some(filtered => filtered._id === emp._id));
-        setShowCreateMissionButton(newSelection.length > 0);
-        return newSelection;
-      });
+    if (allAvailableSelected) {
+      // Désélectionner tous les employés disponibles
+      setSelectedEmployees(prev => 
+        prev.filter(emp => !availableEmployees.some(available => available._id === emp._id))
+      );
     } else {
+      // Sélectionner tous les employés disponibles qui ne sont pas déjà sélectionnés
       const newSelected = [...selectedEmployees];
-      filteredEmployees.forEach(emp => {
+      availableEmployees.forEach(emp => {
         if (!newSelected.some(selected => selected._id === emp._id)) {
           newSelected.push(emp);
         }
       });
       setSelectedEmployees(newSelected);
-      setShowCreateMissionButton(true);
     }
   };
 
@@ -331,9 +399,65 @@ const Missions = () => {
         startDate: start,
         endDate: end
       });
+      
+      // Nettoyer la sélection d'employés avant de vérifier les missions existantes
+      setSelectedEmployees([]);
+      
+      // Vérifier les missions existantes pour tous les employés
+      checkAllEmployeesForExistingMissions(start, end);
     } else {
       setSelectedMonth(null);
       setMissionDates({ startDate: null, endDate: null });
+      setEmployeesWithExistingMissions([]);
+      setSelectedEmployees([]);
+    }
+  };
+
+  // Fonction pour vérifier les missions existantes pour tous les employés
+  const checkAllEmployeesForExistingMissions = async (startDate, endDate) => {
+    if (!startDate || !endDate) return;
+    
+    console.log('🔍 Vérification des missions existantes pour tous les employés...');
+    console.log(`📅 Période cible: ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`);
+    console.log(`👥 Nombre total d'employés à vérifier: ${employees.length}`);
+    
+    const employeesWithMissions = [];
+    let checkedCount = 0;
+    
+    for (const employee of employees) {
+      try {
+        console.log(`\n👤 Vérification de ${employee.nom} ${employee.prenom} (${employee.matricule})...`);
+        const existingMission = await checkEmployeeMonthlyMission(employee._id, startDate, endDate);
+        
+        if (existingMission) {
+          console.log(`⚠️  Mission existante trouvée: ${existingMission.code_mission}`);
+          employeesWithMissions.push(employee);
+        } else {
+          console.log(`✅ Aucune mission existante`);
+        }
+        
+        checkedCount++;
+        console.log(`📊 Progression: ${checkedCount}/${employees.length} (${Math.round(checkedCount/employees.length*100)}%)`);
+      } catch (error) {
+        console.error(`❌ Erreur lors de la vérification pour ${employee.nom}:`, error);
+      }
+    }
+    
+    console.log(`\n📋 RÉSUMÉ DE LA VÉRIFICATION:`);
+    console.log(`✅ Employés vérifiés: ${checkedCount}`);
+    console.log(`⚠️  Employés avec missions existantes: ${employeesWithMissions.length}`);
+    
+    setEmployeesWithExistingMissions(employeesWithMissions);
+    
+    if (employeesWithMissions.length > 0) {
+      const monthName = startDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+      const employeeNames = employeesWithMissions.map(emp => `${emp.nom} ${emp.prenom}`).join(', ');
+      const message = `Les employés suivants ont déjà une mission mensuelle pour ${monthName}: ${employeeNames}`;
+      setError(message);
+      console.log(`🚨 Message d'erreur affiché: ${message}`);
+    } else {
+      setError(null);
+      console.log(`✅ Aucun conflit détecté`);
     }
   };
 
@@ -371,66 +495,55 @@ const Missions = () => {
         return;
       }
 
-      const missionsToCreate = selectedEmployees.map((employee) => {
-        if (!employee._id || !employee.matricule) {
-          throw new Error(`Données employé incomplètes: ${employee.nom} ${employee.prenom}`);
-        }
+      // Vérification supplémentaire : s'assurer qu'aucun employé sélectionné n'a de mission existante
+      const employeesWithConflicts = selectedEmployees.filter(emp => 
+        employeesWithExistingMissions.some(existingEmp => existingEmp._id === emp._id)
+      );
 
-        const missionData = {
-          type: 'monthly',
-          status: 'active',
-          employee: employee._id,
-          destinations: selectedDestinations.map(dest => ({
-            name: dest,
-            type: 'mission',
-            address: dest,
-            city: 'Alger',
-            country: 'Algeria'
-          })),
-          startDate: missionDates.startDate.toISOString(),
-          endDate: missionDates.endDate.toISOString(),
-          transportMode: selectedTransportMode.trim(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
+      if (employeesWithConflicts.length > 0) {
+        const monthName = missionDates.startDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+        const employeeNames = employeesWithConflicts.map(emp => `${emp.nom} ${emp.prenom}`).join(', ');
+        setError(`Les employés suivants ont déjà une mission mensuelle pour ${monthName}: ${employeeNames}`);
+        return;
+      }
 
-        console.log('Données de mission à créer:', {
-          employeeId: missionData.employee,
-          employeeInfo: {
-            matricule: employee.matricule,
-            nom: employee.nom,
-            prenom: employee.prenom,
-            centre: employee.centre,
-            fonction: employee.poste
-          },
-          destinations: missionData.destinations,
-          dates: {
-            start: formatGregorianDate(missionData.startDate),
-            end: formatGregorianDate(missionData.endDate)
-          },
-          transportMode: missionData.transportMode
-        });
+      // Préparer les données pour la création groupée
+      const groupMissionData = {
+        employees: selectedEmployees.map(emp => ({
+          _id: emp._id,
+          nom: emp.nom,
+          prenom: emp.prenom,
+          matricule: emp.matricule,
+          centre: emp.centre,
+          poste: emp.poste
+        })),
+        startDate: missionDates.startDate.toISOString(),
+        endDate: missionDates.endDate.toISOString(),
+        destinations: selectedDestinations.map(dest => ({
+          name: dest,
+          type: 'mission',
+          address: dest,
+          city: 'Alger',
+          country: 'Algeria'
+        })),
+        type: 'monthly',
+        transportMode: selectedTransportMode.trim()
+      };
 
-        return missionData;
-      });
+      console.log('Données envoyées au serveur:', groupMissionData);
+      console.log('Validation des données:');
+      console.log('- Employés:', groupMissionData.employees.length);
+      console.log('- Destinations:', groupMissionData.destinations.length);
+      console.log('- Dates:', { start: groupMissionData.startDate, end: groupMissionData.endDate });
+      console.log('- Transport:', groupMissionData.transportMode);
 
       try {
-        // Créer les missions une par une pour éviter les conflits
-        const createdMissions = [];
-        for (const missionData of missionsToCreate) {
-          try {
-            const response = await axiosInstance.post('/missions', missionData);
-            createdMissions.push(response.data);
-          } catch (error) {
-            console.error('Erreur lors de la création de la mission:', {
-              missionData,
-              error: error.response?.data || error.message
-            });
-            throw error;
-          }
-        }
-
-        if (createdMissions.length > 0) {
+        // Utiliser la route group pour créer toutes les missions en une fois
+        const response = await axiosInstance.post('/missions/group', groupMissionData);
+        
+        console.log('Réponse du serveur:', response.data);
+        
+        if (response.data && response.data.length > 0) {
           setGroupMissionDialogOpen(false);
           setSelectedEmployees([]);
           setSelectedDestinations([]);
@@ -448,9 +561,20 @@ const Missions = () => {
           dispatch(fetchMissionsSuccess(missionsResponse.data));
         }
       } catch (error) {
-        let errorMessage = 'Une erreur est survenue lors de la création de la mission';
+        console.error('Erreur complète:', error);
+        console.error('Erreur détaillée:', error.response?.data);
+        console.error('Status:', error.response?.status);
+        console.error('Message:', error.message);
+        console.error('Stack:', error.stack);
         
-        if (error.response?.data?.message) {
+        let errorMessage = 'Une erreur est survenue lors de la création des missions';
+        
+        // Vérifier d'abord si c'est une erreur de validation des missions mensuelles
+        if (error.message && error.message.includes('ont déjà une mission mensuelle')) {
+          errorMessage = error.message;
+        } else if (error.response?.data?.code === 'MONTHLY_MISSION_EXISTS') {
+          errorMessage = error.response.data.message;
+        } else if (error.response?.data?.message) {
           errorMessage = error.response.data.message;
         } else if (error.response?.status === 400) {
           if (error.response?.data?.errors) {
@@ -461,6 +585,8 @@ const Missions = () => {
           } else {
             errorMessage = 'البيانات المدخلة غير صحيحة';
           }
+        } else if (error.message) {
+          errorMessage = error.message;
         }
         
         setError(errorMessage);
@@ -629,6 +755,49 @@ const Missions = () => {
     setGroupMissionDialogOpen(true);
   };
 
+  // Fonction pour vérifier les missions mensuelles existantes pour un employé
+  const checkEmployeeMonthlyMission = async (employeeId, startDate, endDate) => {
+    if (!employeeId || !startDate || !endDate) return null;
+    
+    try {
+      // Calculer le mois cible (année et mois)
+      const targetYear = startDate.getFullYear();
+      const targetMonth = startDate.getMonth();
+      
+      console.log(`Vérification pour employé ${employeeId} - Mois cible: ${targetMonth + 1}/${targetYear}`);
+      
+      const response = await axiosInstance.get('/missions', {
+        params: {
+          employee: employeeId,
+          type: 'monthly'
+        }
+      });
+      
+      console.log(`Missions trouvées pour l'employé:`, response.data.length);
+      
+      // Filtrer les missions mensuelles qui sont dans le même mois
+      const conflictingMissions = response.data.filter(mission => {
+        const missionStart = new Date(mission.startDate);
+        const missionYear = missionStart.getFullYear();
+        const missionMonth = missionStart.getMonth();
+        
+        // Vérifier si la mission est dans le même mois et année
+        const isSameMonth = missionYear === targetYear && missionMonth === targetMonth;
+        
+        console.log(`Mission ${mission.code_mission}: ${missionMonth + 1}/${missionYear} - Même mois: ${isSameMonth}`);
+        
+        return isSameMonth;
+      });
+      
+      console.log(`Missions en conflit trouvées:`, conflictingMissions.length);
+      
+      return conflictingMissions.length > 0 ? conflictingMissions[0] : null;
+    } catch (error) {
+      console.error('Erreur lors de la vérification des missions existantes:', error);
+      return null;
+    }
+  };
+
   const renderEmployeesList = () => {
     return (
       <>
@@ -640,7 +809,7 @@ const Missions = () => {
             alignItems: { xs: 'stretch', sm: 'center' },
             justifyContent: 'space-between'
           }}>
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
               {showCreateMissionButton && (
                 <Button
                   variant="contained"
@@ -656,28 +825,49 @@ const Missions = () => {
                 variant="outlined"
                 onClick={handleSelectAll}
                 startIcon={<Checkbox 
-                  checked={filteredEmployees.length > 0 && filteredEmployees.every(emp => 
-                    selectedEmployees.some(selected => selected._id === emp._id)
-                  )}
+                  checked={filteredEmployees.filter(emp => getEmployeeStatus(emp).selectable).length > 0 && 
+                          filteredEmployees.filter(emp => getEmployeeStatus(emp).selectable).every(emp => 
+                            selectedEmployees.some(selected => selected._id === emp._id)
+                          )}
                   indeterminate={
-                    filteredEmployees.some(emp => 
+                    filteredEmployees.filter(emp => getEmployeeStatus(emp).selectable).some(emp => 
                       selectedEmployees.some(selected => selected._id === emp._id)
                     ) && 
-                    !filteredEmployees.every(emp => 
+                    !filteredEmployees.filter(emp => getEmployeeStatus(emp).selectable).every(emp => 
                       selectedEmployees.some(selected => selected._id === emp._id)
                     )
                   }
                   sx={{ p: 0 }}
                 />}
               >
-                {filteredEmployees.every(emp => 
+                {filteredEmployees.filter(emp => getEmployeeStatus(emp).selectable).every(emp => 
                   selectedEmployees.some(selected => selected._id === emp._id)
                 ) ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
               </Button>
-              <Typography variant="body2" color="text.secondary">
-                {selectedEmployees.length} موظف محدد
-              </Typography>
+              
+              {/* Indicateurs de statut */}
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Chip
+                  label={`متاح: ${filteredEmployees.filter(emp => getEmployeeStatus(emp).status === 'available').length}`}
+                  color="primary"
+                  size="small"
+                  variant="outlined"
+                />
+                <Chip
+                  label={`محدد: ${selectedEmployees.length}`}
+                  color="success"
+                  size="small"
+                  variant="outlined"
+                />
+                <Chip
+                  label={`مهمة موجودة: ${filteredEmployees.filter(emp => getEmployeeStatus(emp).status === 'existing_mission').length}`}
+                  color="warning"
+                  size="small"
+                  variant="outlined"
+                />
+              </Box>
             </Box>
+            
             <Box sx={{ 
               display: 'flex', 
               gap: 2,
@@ -719,87 +909,220 @@ const Missions = () => {
           </Box>
         </Paper>
 
+        {/* Légende des statuts */}
+        <Paper sx={{ mb: 2, p: 2 }}>
+          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
+            دليل الألوان والرموز:
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <PersonIcon color="primary" />
+              <Typography variant="body2">متاح للاختيار</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <AssignmentIcon color="warning" />
+              <Typography variant="body2">مهمة شهرية موجودة</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Chip label="متاح" color="primary" size="small" variant="outlined" />
+              <Typography variant="body2">يمكن اختياره</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Chip label="محدد" color="success" size="small" variant="outlined" />
+              <Typography variant="body2">تم اختياره</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Chip label="مهمة موجودة" color="warning" size="small" variant="outlined" />
+              <Typography variant="body2">لا يمكن اختياره</Typography>
+            </Box>
+          </Box>
+        </Paper>
+
         <Paper sx={{ mt: 2 }}>
           <List sx={{ px: 3, mx: 0 }}>
             {filteredEmployees.length > 0 ? (
               filteredEmployees
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map((employee, index) => (
-                  <React.Fragment key={employee._id}>
-                    <ListItem
-                      sx={{
-                        '&:hover': {
-                          bgcolor: 'action.hover',
-                        },
-                        flexDirection: 'row-reverse',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 2,
-                        justifyContent: 'flex-start',
-                        px: 0,
-                        mx: 0
-                      }}
-                    >
-                      <Box sx={{ width: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                        <Checkbox
-                          edge="end"
-                          checked={selectedEmployees.some(emp => emp._id === employee._id)}
-                          onChange={() => handleEmployeeSelect(employee)}
-                        />
-                      </Box>
-                      <ListItemIcon sx={{ width: '40px', minWidth: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                        <PersonIcon color="primary" />
-                      </ListItemIcon>
-                      <Typography sx={{ 
-                        width: '80px', 
-                        textAlign: 'right', 
-                        px: 0,
-                        pr: 2
-                      }}>
-                        {employee.matricule}
-                      </Typography>
-                      <Box sx={{ width: '200px', textAlign: 'right', px: 0, pr: 2 }}>
-                        <Typography sx={{ fontWeight: 'medium' }}>
-                          {`${employee.nom} ${employee.prenom}`}
+                .map((employee, index) => {
+                  const employeeStatus = getEmployeeStatus(employee);
+                  const hasExistingMission = employeeStatus.status === 'existing_mission';
+                  
+                  return (
+                    <React.Fragment key={employee._id}>
+                      <ListItem
+                        sx={{
+                          '&:hover': {
+                            bgcolor: hasExistingMission ? 'rgba(255, 193, 7, 0.15)' : 'action.hover',
+                          },
+                          flexDirection: 'row-reverse',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 2,
+                          justifyContent: 'flex-start',
+                          px: 0,
+                          mx: 0,
+                          backgroundColor: employeeStatus.backgroundColor,
+                          borderLeft: hasExistingMission ? '4px solid #ff9800' : 'none',
+                          opacity: hasExistingMission ? 0.8 : 1,
+                          transition: 'all 0.2s ease-in-out'
+                        }}
+                      >
+                        <Box sx={{ width: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                          <Tooltip 
+                            title={hasExistingMission 
+                              ? `${employee.nom} ${employee.prenom} a déjà une mission mensuelle pour ${missionDates.startDate?.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) || 'ce mois'}`
+                              : `Sélectionner ${employee.nom} ${employee.prenom}`
+                            }
+                            placement="top"
+                          >
+                            <span>
+                              <Checkbox
+                                edge="end"
+                                checked={selectedEmployees.some(emp => emp._id === employee._id)}
+                                onChange={() => handleEmployeeSelect(employee)}
+                                disabled={!employeeStatus.selectable}
+                                sx={{
+                                  '&.Mui-disabled': {
+                                    color: 'rgba(255, 193, 7, 0.5)',
+                                  }
+                                }}
+                              />
+                            </span>
+                          </Tooltip>
+                        </Box>
+                        
+                        <ListItemIcon sx={{ width: '40px', minWidth: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                          {hasExistingMission ? (
+                            <Tooltip title="Mission mensuelle existante">
+                              <AssignmentIcon color="warning" />
+                            </Tooltip>
+                          ) : (
+                            <PersonIcon color="primary" />
+                          )}
+                        </ListItemIcon>
+                        
+                        <Typography sx={{ 
+                          width: '80px', 
+                          textAlign: 'right', 
+                          px: 0,
+                          pr: 2,
+                          color: employeeStatus.textColor,
+                          fontWeight: hasExistingMission ? 'normal' : 'medium'
+                        }}>
+                          {employee.matricule}
                         </Typography>
-                      </Box>
-                      <Typography sx={{ width: '120px', textAlign: 'right', px: 0 }}>
-                        {employee.poste || '-'}
-                      </Typography>
-                      <Typography sx={{ 
-                        width: '120px', 
-                        textAlign: 'right', 
-                        px: 0,
-                        pr: 2
-                      }}>
-                        {employee.centre || 'غير محدد'}
-                      </Typography>
-                      <Typography sx={{ width: '80px', textAlign: 'right', px: 0 }}>
-                        {employee.sexe === 'M' ? 'ذكر' : 'أنثى'}
-                      </Typography>
-                      <Typography sx={{ width: '100px', textAlign: 'right', px: 0 }}>
-                        {employee.telephone || '-'}
-                      </Typography>
-                      <Box sx={{ width: '80px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                        <Chip
-                          label="نشط"
-                          color="success"
-                          size="small"
-                        />
-                      </Box>
-                    </ListItem>
-                    {index < filteredEmployees.length - 1 && <Divider />}
-                  </React.Fragment>
-                ))
+                        
+                        <Box sx={{ width: '200px', textAlign: 'right', px: 0, pr: 2 }}>
+                          <Typography sx={{ 
+                            fontWeight: hasExistingMission ? 'normal' : 'medium',
+                            color: employeeStatus.textColor,
+                            textDecoration: hasExistingMission ? 'line-through' : 'none'
+                          }}>
+                            {`${employee.nom} ${employee.prenom}`}
+                          </Typography>
+                        </Box>
+                        
+                        <Typography sx={{ 
+                          width: '120px', 
+                          textAlign: 'right', 
+                          px: 0,
+                          color: employeeStatus.textColor
+                        }}>
+                          {employee.poste || '-'}
+                        </Typography>
+                        
+                        <Typography sx={{ 
+                          width: '120px', 
+                          textAlign: 'right', 
+                          px: 0,
+                          pr: 2,
+                          color: employeeStatus.textColor
+                        }}>
+                          {employee.centre || 'غير محدد'}
+                        </Typography>
+                        
+                        <Typography sx={{ 
+                          width: '80px', 
+                          textAlign: 'right', 
+                          px: 0,
+                          color: employeeStatus.textColor
+                        }}>
+                          {employee.sexe === 'M' ? 'ذكر' : 'أنثى'}
+                        </Typography>
+                        
+                        <Typography sx={{ 
+                          width: '100px', 
+                          textAlign: 'right', 
+                          px: 0,
+                          color: employeeStatus.textColor
+                        }}>
+                          {employee.telephone || '-'}
+                        </Typography>
+                        
+                        <Box sx={{ width: '80px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                          <Chip
+                            label={employeeStatus.label}
+                            color={employeeStatus.color}
+                            size="small"
+                            variant={hasExistingMission ? "outlined" : "filled"}
+                            sx={{
+                              fontSize: '0.75rem',
+                              height: '24px'
+                            }}
+                          />
+                        </Box>
+                      </ListItem>
+                      {index < filteredEmployees.length - 1 && <Divider />}
+                    </React.Fragment>
+                  );
+                })
             ) : (
               <ListItem>
                 <ListItemText 
-                  primary="لا يوجد موظفون نشطين في هذه الفئة"
+                  primary="لا يوجد موظفون في هذه الفئة"
                   sx={{ textAlign: 'center' }}
                 />
               </ListItem>
             )}
           </List>
+          
+          {/* Statistiques en bas de la liste */}
+          <Box sx={{ 
+            p: 2, 
+            borderTop: 1, 
+            borderColor: 'divider',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: 1
+          }}>
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <Chip
+                label={`متاح: ${filteredEmployees.filter(emp => getEmployeeStatus(emp).status === 'available').length}`}
+                color="primary"
+                size="small"
+                variant="outlined"
+              />
+              <Chip
+                label={`محدد: ${selectedEmployees.length}`}
+                color="success"
+                size="small"
+                variant="outlined"
+              />
+              <Chip
+                label={`مهمة موجودة: ${filteredEmployees.filter(emp => getEmployeeStatus(emp).status === 'existing_mission').length}`}
+                color="warning"
+                size="small"
+                variant="outlined"
+              />
+            </Box>
+            
+            <Typography variant="body2" color="text.secondary">
+              إجمالي الموظفين: {filteredEmployees.length}
+            </Typography>
+          </Box>
+          
           <TablePagination
             rowsPerPageOptions={[5, 10, 25]}
             component="div"
