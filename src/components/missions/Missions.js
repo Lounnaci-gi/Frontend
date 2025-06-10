@@ -58,6 +58,7 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { useReactToPrint } from 'react-to-print';
 import MissionPrint from './MissionPrint';
+import MonthPicker from './MonthPicker';
 
 // Fonction utilitaire pour formater les dates en grégorien
 const formatGregorianDate = (date) => {
@@ -184,7 +185,9 @@ const Missions = () => {
 
   const filteredEmployees = useMemo(() => {
     return employees.filter(employee => {
-      const matchesCentre = selectedCentre === 'all' || employee.centre === selectedCentre;
+      const matchesCentre = selectedCentre === 'all' || 
+        (employee.centre && employee.centre.trim() === selectedCentre.trim());
+      
       const searchTermLower = searchTerm.toLowerCase();
       const matchesSearch = !searchTerm || 
         employee.nom?.toLowerCase().includes(searchTermLower) ||
@@ -391,74 +394,37 @@ const Missions = () => {
     return { start, end };
   };
 
-  const handleMonthChange = (date) => {
-    if (date) {
-      const { start, end } = getMonthStartAndEnd(date);
-      setSelectedMonth(date);
-      setMissionDates({
-        startDate: start,
-        endDate: end
-      });
-      
-      // Nettoyer la sélection d'employés avant de vérifier les missions existantes
-      setSelectedEmployees([]);
-      
-      // Vérifier les missions existantes pour tous les employés
-      checkAllEmployeesForExistingMissions(start, end);
-    } else {
-      setSelectedMonth(null);
-      setMissionDates({ startDate: null, endDate: null });
-      setEmployeesWithExistingMissions([]);
-      setSelectedEmployees([]);
-    }
+  // Ajout de la fonction de validation des dates
+  const isDateInAllowedRange = (date) => {
+    const today = new Date();
+    const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    const selectedDate = new Date(date.getFullYear(), date.getMonth(), 1);
+
+    return selectedDate >= currentMonth && selectedDate <= nextMonth;
   };
 
-  // Fonction pour vérifier les missions existantes pour tous les employés
-  const checkAllEmployeesForExistingMissions = async (startDate, endDate) => {
-    if (!startDate || !endDate) return;
-    
-    console.log('🔍 Vérification des missions existantes pour tous les employés...');
-    console.log(`📅 Période cible: ${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}`);
-    console.log(`👥 Nombre total d'employés à vérifier: ${employees.length}`);
-    
-    const employeesWithMissions = [];
-    let checkedCount = 0;
-    
-    for (const employee of employees) {
-      try {
-        console.log(`\n👤 Vérification de ${employee.nom} ${employee.prenom} (${employee.matricule})...`);
-        const existingMission = await checkEmployeeMonthlyMission(employee._id, startDate, endDate);
-        
-        if (existingMission) {
-          console.log(`⚠️  Mission existante trouvée: ${existingMission.code_mission}`);
-          employeesWithMissions.push(employee);
-        } else {
-          console.log(`✅ Aucune mission existante`);
-        }
-        
-        checkedCount++;
-        console.log(`📊 Progression: ${checkedCount}/${employees.length} (${Math.round(checkedCount/employees.length*100)}%)`);
-      } catch (error) {
-        console.error(`❌ Erreur lors de la vérification pour ${employee.nom}:`, error);
-      }
-    }
-    
-    console.log(`\n📋 RÉSUMÉ DE LA VÉRIFICATION:`);
-    console.log(`✅ Employés vérifiés: ${checkedCount}`);
-    console.log(`⚠️  Employés avec missions existantes: ${employeesWithMissions.length}`);
-    
-    setEmployeesWithExistingMissions(employeesWithMissions);
-    
-    if (employeesWithMissions.length > 0) {
-      const monthName = startDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-      const employeeNames = employeesWithMissions.map(emp => `${emp.nom} ${emp.prenom}`).join(', ');
-      const message = `Les employés suivants ont déjà une mission mensuelle pour ${monthName}: ${employeeNames}`;
-      setError(message);
-      console.log(`🚨 Message d'erreur affiché: ${message}`);
-    } else {
+  const handleMonthChange = (date) => {
+    if (!date) {
+      setSelectedMonth(null);
+      setMissionDates({ startDate: null, endDate: null });
       setError(null);
-      console.log(`✅ Aucun conflit détecté`);
+      return;
     }
+
+    if (!isDateInAllowedRange(date)) {
+      setError('يمكن إنشاء المهام الشهرية فقط للشهر الحالي أو الشهر القادم');
+      setSelectedMonth(null);
+      setMissionDates({ startDate: null, endDate: null });
+      return;
+    }
+
+    const startDate = new Date(date.getFullYear(), date.getMonth(), 1);
+    const endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    
+    setSelectedMonth(date);
+    setMissionDates({ startDate, endDate });
+    setError(null);
   };
 
   // Fonction pour générer un code de mission séquentiel
@@ -467,133 +433,107 @@ const Missions = () => {
     return `${paddedSequence}/${missionYear}`;
   };
 
+  // Ajout de la fonction de vérification des missions existantes
+  const hasExistingMonthlyMission = (employeeId) => {
+    const today = new Date();
+    const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+
+    return missions.some(mission => 
+      mission.type === 'monthly' &&
+      mission.status === 'active' &&
+      mission.employee._id === employeeId &&
+      new Date(mission.startDate) >= currentMonth &&
+      new Date(mission.endDate) <= nextMonth
+    );
+  };
+
+  // Modification de la fonction handleCreateGroupMission
   const handleCreateGroupMission = async () => {
-    setShowValidationErrors(true);
+    if (!formValid) {
+      setShowValidationErrors(true);
+      return;
+    }
+
     try {
-      if (!formValid) {
-        setError('يرجى ملء جميع الحقول المطلوبة');
-        return;
-      }
+      setLoading(true);
+      setError(null);
 
-      if (!missionDates.startDate || !missionDates.endDate) {
-        setError('يرجى تحديد شهر المهمة');
-        return;
-      }
-
-      if (selectedEmployees.length === 0) {
-        setError('يرجى تحديد موظف واحد على الأقل');
-        return;
-      }
-
-      if (selectedDestinations.length === 0) {
-        setError('يرجى تحديد وجهة واحدة على الأقل');
-        return;
-      }
-
-      if (!selectedTransportMode || selectedTransportMode.trim() === '') {
-        setError('يرجى تحديد وسيلة النقل');
-        return;
-      }
-
-      // Vérification supplémentaire : s'assurer qu'aucun employé sélectionné n'a de mission existante
-      const employeesWithConflicts = selectedEmployees.filter(emp => 
-        employeesWithExistingMissions.some(existingEmp => existingEmp._id === emp._id)
+      // Vérifier les missions existantes pour chaque employé
+      const employeesWithExistingMissions = selectedEmployees.filter(employee => 
+        hasExistingMonthlyMission(employee._id)
       );
 
-      if (employeesWithConflicts.length > 0) {
-        const monthName = missionDates.startDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-        const employeeNames = employeesWithConflicts.map(emp => `${emp.nom} ${emp.prenom}`).join(', ');
-        setError(`Les employés suivants ont déjà une mission mensuelle pour ${monthName}: ${employeeNames}`);
+      if (employeesWithExistingMissions.length > 0) {
+        const employeeNames = employeesWithExistingMissions
+          .map(emp => `${emp.nom} ${emp.prenom}`)
+          .join(', ');
+        setError(`الموظفون التاليون لديهم بالفعل مهمة شهرية لهذا الشهر: ${employeeNames}`);
         return;
       }
 
-      // Préparer les données pour la création groupée
-      const groupMissionData = {
-        employees: selectedEmployees.map(emp => ({
-          _id: emp._id,
-          nom: emp.nom,
-          prenom: emp.prenom,
-          matricule: emp.matricule,
-          centre: emp.centre,
-          poste: emp.poste
-        })),
-        startDate: missionDates.startDate.toISOString(),
-        endDate: missionDates.endDate.toISOString(),
-        destinations: selectedDestinations.map(dest => ({
-          name: dest,
-          type: 'mission',
-          address: dest,
-          city: 'Alger',
-          country: 'Algeria'
-        })),
-        type: 'monthly',
-        transportMode: selectedTransportMode.trim()
-      };
-
-      console.log('Données envoyées au serveur:', groupMissionData);
-      console.log('Validation des données:');
-      console.log('- Employés:', groupMissionData.employees.length);
-      console.log('- Destinations:', groupMissionData.destinations.length);
-      console.log('- Dates:', { start: groupMissionData.startDate, end: groupMissionData.endDate });
-      console.log('- Transport:', groupMissionData.transportMode);
-
-      try {
-        // Utiliser la route group pour créer toutes les missions en une fois
-        const response = await axiosInstance.post('/missions/group', groupMissionData);
-        
-        console.log('Réponse du serveur:', response.data);
-        
-        if (response.data && response.data.length > 0) {
-          setGroupMissionDialogOpen(false);
-          setSelectedEmployees([]);
-          setSelectedDestinations([]);
-          setDestinationInput('');
-          setSelectedTransportMode('');
-          setTransportModeInput('');
-          setSelectedMonth(null);
-          setMissionDates({ startDate: null, endDate: null });
-          setError(null);
-          setFormValid(false);
-          setShowValidationErrors(false);
-          
-          dispatch(fetchMissionsStart());
-          const missionsResponse = await axiosInstance.get('/missions');
-          dispatch(fetchMissionsSuccess(missionsResponse.data));
+      const missionsToCreate = selectedEmployees.map((employee) => {
+        if (!employee._id || !employee.matricule) {
+          throw new Error(`Données employé incomplètes: ${employee.nom} ${employee.prenom}`);
         }
-      } catch (error) {
-        console.error('Erreur complète:', error);
-        console.error('Erreur détaillée:', error.response?.data);
-        console.error('Status:', error.response?.status);
-        console.error('Message:', error.message);
-        console.error('Stack:', error.stack);
-        
-        let errorMessage = 'Une erreur est survenue lors de la création des missions';
-        
-        // Vérifier d'abord si c'est une erreur de validation des missions mensuelles
-        if (error.message && error.message.includes('ont déjà une mission mensuelle')) {
-          errorMessage = error.message;
-        } else if (error.response?.data?.code === 'MONTHLY_MISSION_EXISTS') {
-          errorMessage = error.response.data.message;
-        } else if (error.response?.data?.message) {
-          errorMessage = error.response.data.message;
-        } else if (error.response?.status === 400) {
-          if (error.response?.data?.errors) {
-            const validationErrors = error.response.data.errors;
-            errorMessage = Object.entries(validationErrors)
-              .map(([field, messages]) => `${field}: ${messages.join(', ')}`)
-              .join('\n');
-          } else {
-            errorMessage = 'البيانات المدخلة غير صحيحة';
-          }
-        } else if (error.message) {
-          errorMessage = error.message;
+
+        const missionData = {
+          type: 'monthly',
+          status: 'active',
+          employee: employee._id,
+          destinations: selectedDestinations.map(dest => ({
+            name: dest,
+            type: 'mission',
+            address: dest,
+            city: 'Alger',
+            country: 'Algeria'
+          })),
+          startDate: missionDates.startDate.toISOString(),
+          endDate: missionDates.endDate.toISOString(),
+          transportMode: selectedTransportMode.trim(),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+
+        return missionData;
+      });
+
+      // Créer les missions une par une
+      const createdMissions = [];
+      for (const missionData of missionsToCreate) {
+        try {
+          const response = await axiosInstance.post('/missions', missionData);
+          createdMissions.push(response.data);
+        } catch (error) {
+          console.error('Erreur lors de la création de la mission:', {
+            missionData,
+            error: error.response?.data || error.message
+          });
+          throw error;
         }
+      }
+
+      if (createdMissions.length > 0) {
+        setGroupMissionDialogOpen(false);
+        setSelectedEmployees([]);
+        setSelectedDestinations([]);
+        setDestinationInput('');
+        setSelectedTransportMode('');
+        setTransportModeInput('');
+        setSelectedMonth(null);
+        setMissionDates({ startDate: null, endDate: null });
+        setError(null);
+        setFormValid(false);
+        setShowValidationErrors(false);
         
-        setError(errorMessage);
+        dispatch(fetchMissionsStart());
+        const missionsResponse = await axiosInstance.get('/missions');
+        dispatch(fetchMissionsSuccess(missionsResponse.data));
       }
     } catch (error) {
-      console.error('Erreur inattendue:', error);
-      setError('حدث خطأ غير متوقع');
+      setError(error.response?.data?.message || 'Une erreur est survenue lors de la création des missions');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -844,30 +784,10 @@ const Missions = () => {
                   selectedEmployees.some(selected => selected._id === emp._id)
                 ) ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
               </Button>
-              
-              {/* Indicateurs de statut */}
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                <Chip
-                  label={`متاح: ${filteredEmployees.filter(emp => getEmployeeStatus(emp).status === 'available').length}`}
-                  color="primary"
-                  size="small"
-                  variant="outlined"
-                />
-                <Chip
-                  label={`محدد: ${selectedEmployees.length}`}
-                  color="success"
-                  size="small"
-                  variant="outlined"
-                />
-                <Chip
-                  label={`مهمة موجودة: ${filteredEmployees.filter(emp => getEmployeeStatus(emp).status === 'existing_mission').length}`}
-                  color="warning"
-                  size="small"
-                  variant="outlined"
-                />
-              </Box>
+              <Typography>
+                {selectedEmployees.length} موظف محدد
+              </Typography>
             </Box>
-            
             <Box sx={{ 
               display: 'flex', 
               gap: 2,
@@ -909,232 +829,99 @@ const Missions = () => {
           </Box>
         </Paper>
 
-        {/* Légende des statuts */}
-        <Paper sx={{ mb: 2, p: 2 }}>
-          <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'bold' }}>
-            دليل الألوان والرموز:
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <PersonIcon color="primary" />
-              <Typography variant="body2">متاح للاختيار</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <AssignmentIcon color="warning" />
-              <Typography variant="body2">مهمة شهرية موجودة</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Chip label="متاح" color="primary" size="small" variant="outlined" />
-              <Typography variant="body2">يمكن اختياره</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Chip label="محدد" color="success" size="small" variant="outlined" />
-              <Typography variant="body2">تم اختياره</Typography>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Chip label="مهمة موجودة" color="warning" size="small" variant="outlined" />
-              <Typography variant="body2">لا يمكن اختياره</Typography>
-            </Box>
-          </Box>
-        </Paper>
-
-        <Paper sx={{ mt: 2 }}>
-          <List sx={{ px: 3, mx: 0 }}>
-            {filteredEmployees.length > 0 ? (
-              filteredEmployees
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map((employee, index) => {
-                  const employeeStatus = getEmployeeStatus(employee);
-                  const hasExistingMission = employeeStatus.status === 'existing_mission';
-                  
-                  return (
-                    <React.Fragment key={employee._id}>
-                      <ListItem
-                        sx={{
-                          '&:hover': {
-                            bgcolor: hasExistingMission ? 'rgba(255, 193, 7, 0.15)' : 'action.hover',
-                          },
-                          flexDirection: 'row-reverse',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 2,
-                          justifyContent: 'flex-start',
-                          px: 0,
-                          mx: 0,
-                          backgroundColor: employeeStatus.backgroundColor,
-                          borderLeft: hasExistingMission ? '4px solid #ff9800' : 'none',
-                          opacity: hasExistingMission ? 0.8 : 1,
-                          transition: 'all 0.2s ease-in-out'
-                        }}
-                      >
-                        <Box sx={{ width: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                          <Tooltip 
-                            title={hasExistingMission 
-                              ? `${employee.nom} ${employee.prenom} a déjà une mission mensuelle pour ${missionDates.startDate?.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) || 'ce mois'}`
-                              : `Sélectionner ${employee.nom} ${employee.prenom}`
-                            }
-                            placement="top"
-                          >
-                            <span>
-                              <Checkbox
-                                edge="end"
-                                checked={selectedEmployees.some(emp => emp._id === employee._id)}
-                                onChange={() => handleEmployeeSelect(employee)}
-                                disabled={!employeeStatus.selectable}
-                                sx={{
-                                  '&.Mui-disabled': {
-                                    color: 'rgba(255, 193, 7, 0.5)',
-                                  }
-                                }}
-                              />
-                            </span>
-                          </Tooltip>
-                        </Box>
-                        
-                        <ListItemIcon sx={{ width: '40px', minWidth: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
-                          {hasExistingMission ? (
-                            <Tooltip title="Mission mensuelle existante">
-                              <AssignmentIcon color="warning" />
-                            </Tooltip>
-                          ) : (
-                            <PersonIcon color="primary" />
-                          )}
-                        </ListItemIcon>
-                        
-                        <Typography sx={{ 
-                          width: '80px', 
-                          textAlign: 'right', 
-                          px: 0,
-                          pr: 2,
-                          color: employeeStatus.textColor,
-                          fontWeight: hasExistingMission ? 'normal' : 'medium'
-                        }}>
-                          {employee.matricule}
+        <List sx={{ px: 3, mx: 0 }}>
+          {filteredEmployees.length > 0 ? (
+            filteredEmployees
+              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+              .map((employee, index) => {
+                const hasMission = hasExistingMonthlyMission(employee._id);
+                return (
+                  <React.Fragment key={employee._id}>
+                    <ListItem
+                      sx={{
+                        '&:hover': {
+                          bgcolor: hasMission ? 'action.disabledBackground' : 'action.hover',
+                        },
+                        flexDirection: 'row-reverse',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 2,
+                        justifyContent: 'flex-start',
+                        px: 0,
+                        mx: 0,
+                        opacity: hasMission ? 0.7 : 1
+                      }}
+                    >
+                      <Box sx={{ width: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                        <Checkbox
+                          edge="end"
+                          checked={selectedEmployees.some(emp => emp._id === employee._id)}
+                          onChange={() => handleEmployeeSelect(employee)}
+                          disabled={hasMission}
+                        />
+                      </Box>
+                      <ListItemIcon sx={{ width: '40px', minWidth: '40px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                        <PersonIcon color={hasMission ? "disabled" : "primary"} />
+                      </ListItemIcon>
+                      <Typography sx={{ 
+                        width: '80px', 
+                        textAlign: 'right', 
+                        px: 0,
+                        pr: 2
+                      }}>
+                        {employee.matricule}
+                      </Typography>
+                      <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                        <Typography sx={{ fontWeight: 'medium' }}>
+                          {`${employee.nom} ${employee.prenom}`}
                         </Typography>
-                        
-                        <Box sx={{ width: '200px', textAlign: 'right', px: 0, pr: 2 }}>
-                          <Typography sx={{ 
-                            fontWeight: hasExistingMission ? 'normal' : 'medium',
-                            color: employeeStatus.textColor,
-                            textDecoration: hasExistingMission ? 'line-through' : 'none'
-                          }}>
-                            {`${employee.nom} ${employee.prenom}`}
-                          </Typography>
-                        </Box>
-                        
-                        <Typography sx={{ 
-                          width: '120px', 
-                          textAlign: 'right', 
-                          px: 0,
-                          color: employeeStatus.textColor
-                        }}>
-                          {employee.poste || '-'}
-                        </Typography>
-                        
-                        <Typography sx={{ 
-                          width: '120px', 
-                          textAlign: 'right', 
-                          px: 0,
-                          pr: 2,
-                          color: employeeStatus.textColor
-                        }}>
-                          {employee.centre || 'غير محدد'}
-                        </Typography>
-                        
-                        <Typography sx={{ 
-                          width: '80px', 
-                          textAlign: 'right', 
-                          px: 0,
-                          color: employeeStatus.textColor
-                        }}>
-                          {employee.sexe === 'M' ? 'ذكر' : 'أنثى'}
-                        </Typography>
-                        
-                        <Typography sx={{ 
-                          width: '100px', 
-                          textAlign: 'right', 
-                          px: 0,
-                          color: employeeStatus.textColor
-                        }}>
-                          {employee.telephone || '-'}
-                        </Typography>
-                        
-                        <Box sx={{ width: '80px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                      </Box>
+                      <Typography sx={{ width: '120px', textAlign: 'right', px: 0 }}>
+                        {employee.poste || '-'}
+                      </Typography>
+                      <Typography sx={{ 
+                        width: '120px', 
+                        textAlign: 'right', 
+                        px: 0,
+                        pr: 2
+                      }}>
+                        {employee.centre || 'غير محدد'}
+                      </Typography>
+                      <Typography sx={{ width: '80px', textAlign: 'right', px: 0 }}>
+                        {employee.sexe === 'M' ? 'ذكر' : 'أنثى'}
+                      </Typography>
+                      <Typography sx={{ width: '100px', textAlign: 'right', px: 0 }}>
+                        {employee.telephone || '-'}
+                      </Typography>
+                      <Box sx={{ width: '80px', display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
+                        {hasMission ? (
                           <Chip
-                            label={employeeStatus.label}
-                            color={employeeStatus.color}
+                            label="مهمة شهرية جارية"
+                            color="warning"
                             size="small"
-                            variant={hasExistingMission ? "outlined" : "filled"}
-                            sx={{
-                              fontSize: '0.75rem',
-                              height: '24px'
-                            }}
                           />
-                        </Box>
-                      </ListItem>
-                      {index < filteredEmployees.length - 1 && <Divider />}
-                    </React.Fragment>
-                  );
-                })
-            ) : (
-              <ListItem>
-                <ListItemText 
-                  primary="لا يوجد موظفون في هذه الفئة"
-                  sx={{ textAlign: 'center' }}
-                />
-              </ListItem>
-            )}
-          </List>
-          
-          {/* Statistiques en bas de la liste */}
-          <Box sx={{ 
-            p: 2, 
-            borderTop: 1, 
-            borderColor: 'divider',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexDirection: { xs: 'column', sm: 'row' },
-            gap: 1
-          }}>
-            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-              <Chip
-                label={`متاح: ${filteredEmployees.filter(emp => getEmployeeStatus(emp).status === 'available').length}`}
-                color="primary"
-                size="small"
-                variant="outlined"
+                        ) : (
+                          <Chip
+                            label="نشط"
+                            color="success"
+                            size="small"
+                          />
+                        )}
+                      </Box>
+                    </ListItem>
+                    {index < filteredEmployees.length - 1 && <Divider />}
+                  </React.Fragment>
+                );
+              })
+          ) : (
+            <ListItem>
+              <ListItemText 
+                primary="لا يوجد موظفون نشطين في هذه الفئة"
+                sx={{ textAlign: 'center' }}
               />
-              <Chip
-                label={`محدد: ${selectedEmployees.length}`}
-                color="success"
-                size="small"
-                variant="outlined"
-              />
-              <Chip
-                label={`مهمة موجودة: ${filteredEmployees.filter(emp => getEmployeeStatus(emp).status === 'existing_mission').length}`}
-                color="warning"
-                size="small"
-                variant="outlined"
-              />
-            </Box>
-            
-            <Typography variant="body2" color="text.secondary">
-              إجمالي الموظفين: {filteredEmployees.length}
-            </Typography>
-          </Box>
-          
-          <TablePagination
-            rowsPerPageOptions={[5, 10, 25]}
-            component="div"
-            count={filteredEmployees.length}
-            rowsPerPage={rowsPerPage}
-            page={page}
-            onPageChange={handleChangePage}
-            onRowsPerPageChange={handleChangeRowsPerPage}
-            labelRowsPerPage="عدد الصفوف في الصفحة"
-            labelDisplayedRows={({ from, to, count }) => `${from}-${to} من ${count}`}
-          />
-        </Paper>
+            </ListItem>
+          )}
+        </List>
       </>
     );
   };
@@ -1192,103 +979,105 @@ const Missions = () => {
             </Tabs>
 
             {tabValue === 0 && renderEmployeesList()}
-            {tabValue === 1 && <MissionForm />}
+            {tabValue === 1 && (
+              <>
+                <TableContainer component={Paper}>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell align="right" sx={{ fontWeight: 'bold', width: '120px' }}>الإجراءات</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>الهاتف</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>النوع</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>تاريخ الانتهاء</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>تاريخ البدء</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>الوجهة</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>المركز</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>الوظيفة</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>الاسم</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>اللقب</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>رمز الموظف</TableCell>
+                        <TableCell 
+                          align="right" 
+                          onClick={() => handleSort('code_mission')}
+                          style={{ cursor: 'pointer' }}
+                        >
+                          رمز المهمة {sortConfig.key === 'code_mission' && (
+                          <span>{sortConfig.direction === 'asc' ? ' ↑' : ' ↓'}</span>
+                        )}
+                        </TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {filteredMissions
+                        .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                        .map((mission) => (
+                          <TableRow key={mission._id}>
+                            <TableCell align="right">
+                              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                                <Tooltip title="طباعة">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => {
+                                      setSelectedMission(mission);
+                                      setPrintDialogOpen(true);
+                                    }}
+                                  >
+                                    <PrintIcon />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="تعديل">
+                                  <IconButton 
+                                    size="small" 
+                                    color="primary"
+                                    onClick={() => handleOpenForm(mission)}
+                                  >
+                                    <EditIcon />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="حذف">
+                                  <IconButton 
+                                    size="small" 
+                                    color="error"
+                                    onClick={() => handleDeleteClick(mission)}
+                                  >
+                                    <DeleteIcon />
+                                  </IconButton>
+                                </Tooltip>
+                              </Box>
+                            </TableCell>
+                            <TableCell align="right">{mission.employee?.telephone || '-'}</TableCell>
+                            <TableCell align="right">{mission.type === 'monthly' ? 'شهرية' : 'خاصة'}</TableCell>
+                            <TableCell align="right">{formatGregorianDate(mission.endDate)}</TableCell>
+                            <TableCell align="right">{formatGregorianDate(mission.startDate)}</TableCell>
+                            <TableCell align="right">
+                              {Array.isArray(mission.destinations) && mission.destinations.length > 0 
+                                ? mission.destinations.map(dest => dest.name || dest).join('، ')
+                                : mission.destination || '-'}
+                            </TableCell>
+                            <TableCell align="right">{mission.employee?.centre || '-'}</TableCell>
+                            <TableCell align="right">{mission.employee?.poste || '-'}</TableCell>
+                            <TableCell align="right">{mission.employee?.nom}</TableCell>
+                            <TableCell align="right">{mission.employee?.prenom}</TableCell>
+                            <TableCell align="right">{mission.employee?.matricule}</TableCell>
+                            <TableCell align="right">{mission.code_mission || '-'}</TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                  <TablePagination
+                    component="div"
+                    count={filteredMissions.length}
+                    page={page}
+                    onPageChange={handleChangePage}
+                    rowsPerPage={rowsPerPage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                    rowsPerPageOptions={[5, 10, 25]}
+                  />
+                </TableContainer>
+              </>
+            )}
           </Paper>
-
-          <TableContainer component={Paper}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell align="right" sx={{ fontWeight: 'bold', width: '120px' }}>الإجراءات</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>الهاتف</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>النوع</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>تاريخ الانتهاء</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>تاريخ البدء</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>الوجهة</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>المركز</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>الوظيفة</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>الاسم</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>اللقب</TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 'bold' }}>رمز الموظف</TableCell>
-                  <TableCell 
-                    align="right" 
-                    onClick={() => handleSort('code_mission')}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    رمز المهمة {sortConfig.key === 'code_mission' && (
-                      <span>{sortConfig.direction === 'asc' ? ' ↑' : ' ↓'}</span>
-                    )}
-                  </TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredMissions
-                  .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                  .map((mission) => (
-                    <TableRow key={mission._id}>
-                      <TableCell align="right">
-                        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                          <Tooltip title="طباعة">
-                            <IconButton 
-                              size="small" 
-                              color="primary"
-                              onClick={() => {
-                                setSelectedMission(mission);
-                                setPrintDialogOpen(true);
-                              }}
-                            >
-                              <PrintIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="تعديل">
-                            <IconButton 
-                              size="small" 
-                              color="primary"
-                              onClick={() => handleOpenForm(mission)}
-                            >
-                              <EditIcon />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="حذف">
-                            <IconButton 
-                              size="small" 
-                              color="error"
-                              onClick={() => handleDeleteClick(mission)}
-                            >
-                              <DeleteIcon />
-                            </IconButton>
-                          </Tooltip>
-                        </Box>
-                      </TableCell>
-                      <TableCell align="right">{mission.employee.telephone || '-'}</TableCell>
-                      <TableCell align="right">{mission.type === 'monthly' ? 'شهرية' : 'خاصة'}</TableCell>
-                      <TableCell align="right">{formatGregorianDate(mission.endDate)}</TableCell>
-                      <TableCell align="right">{formatGregorianDate(mission.startDate)}</TableCell>
-                      <TableCell align="right">
-                        {Array.isArray(mission.destinations) && mission.destinations.length > 0 
-                          ? mission.destinations.map(dest => dest.name || dest).join('، ')
-                          : mission.destination || '-'}
-                      </TableCell>
-                      <TableCell align="right">{mission.employee.centre || '-'}</TableCell>
-                      <TableCell align="right">{mission.employee.poste || '-'}</TableCell>
-                      <TableCell align="right">{mission.employee.nom}</TableCell>
-                      <TableCell align="right">{mission.employee.prenom}</TableCell>
-                      <TableCell align="right">{mission.employee.matricule}</TableCell>
-                      <TableCell align="right">{mission.code_mission || '-'}</TableCell>
-                    </TableRow>
-                  ))}
-              </TableBody>
-            </Table>
-            <TablePagination
-              component="div"
-              count={filteredMissions.length}
-              page={page}
-              onPageChange={handleChangePage}
-              rowsPerPage={rowsPerPage}
-              onRowsPerPageChange={handleChangeRowsPerPage}
-              rowsPerPageOptions={[5, 10, 25]}
-            />
-          </TableContainer>
 
           {/* Dialog pour le formulaire de mission */}
           <Dialog
@@ -1374,22 +1163,22 @@ const Missions = () => {
             <DialogContent sx={{ p: 3 }}>
               <Grid container spacing={3}>
                 <Grid item xs={12}>
-                  <LocalizationProvider dateAdapter={AdapterDateFns}>
-                    <DatePicker
-                      label="شهر المهمة"
-                      value={selectedMonth}
-                      onChange={handleMonthChange}
-                      views={['month', 'year']}
-                      openTo="month"
-                      slotProps={{
-                        textField: {
-                          fullWidth: true,
-                          required: true,
-                          helperText: showValidationErrors && !selectedMonth ? 'يرجى تحديد شهر المهمة' : ''
-                        }
-                      }}
-                    />
-                  </LocalizationProvider>
+                  <MonthPicker
+                    value={selectedMonth}
+                    onChange={(date, error) => {
+                      setSelectedMonth(date);
+                      setError(error);
+                      if (date) {
+                        const startDate = new Date(date.getFullYear(), date.getMonth(), 1);
+                        const endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+                        setMissionDates({ startDate, endDate });
+                      } else {
+                        setMissionDates({ startDate: null, endDate: null });
+                      }
+                    }}
+                    error={error}
+                    showValidationErrors={showValidationErrors}
+                  />
                 </Grid>
                 <Grid item xs={12}>
                   <Autocomplete
