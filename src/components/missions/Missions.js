@@ -764,21 +764,6 @@ const Missions = () => {
               <Button
                 variant="outlined"
                 onClick={handleSelectAll}
-                startIcon={<Checkbox 
-                  checked={filteredEmployees.filter(emp => getEmployeeStatus(emp).selectable).length > 0 && 
-                          filteredEmployees.filter(emp => getEmployeeStatus(emp).selectable).every(emp => 
-                            selectedEmployees.some(selected => selected._id === emp._id)
-                          )}
-                  indeterminate={
-                    filteredEmployees.filter(emp => getEmployeeStatus(emp).selectable).some(emp => 
-                      selectedEmployees.some(selected => selected._id === emp._id)
-                    ) && 
-                    !filteredEmployees.filter(emp => getEmployeeStatus(emp).selectable).every(emp => 
-                      selectedEmployees.some(selected => selected._id === emp._id)
-                    )
-                  }
-                  sx={{ p: 0 }}
-                />}
               >
                 {filteredEmployees.filter(emp => getEmployeeStatus(emp).selectable).every(emp => 
                   selectedEmployees.some(selected => selected._id === emp._id)
@@ -922,6 +907,29 @@ const Missions = () => {
             </ListItem>
           )}
         </List>
+        
+        {/* Pagination pour la liste des employés */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+          <TablePagination
+            component="div"
+            count={filteredEmployees.length}
+            page={page}
+            onPageChange={handleChangePage}
+            rowsPerPage={rowsPerPage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            rowsPerPageOptions={[5, 10, 25, 50]}
+            labelRowsPerPage="عدد الصفوف في الصفحة"
+            labelDisplayedRows={({ from, to, count }) =>
+              `${from}-${to} من ${count}`
+            }
+            sx={{
+              width: '100%',
+              borderTop: '1px solid',
+              borderColor: 'divider',
+              bgcolor: 'background.paper',
+            }}
+          />
+        </Box>
       </>
     );
   };
@@ -1073,6 +1081,16 @@ const Missions = () => {
                     rowsPerPage={rowsPerPage}
                     onRowsPerPageChange={handleChangeRowsPerPage}
                     rowsPerPageOptions={[5, 10, 25]}
+                    labelRowsPerPage="عدد الصفوف في الصفحة"
+                    labelDisplayedRows={({ from, to, count }) =>
+                      `${from}-${to} من ${count}`
+                    }
+                    sx={{
+                      width: '100%',
+                      borderTop: '1px solid',
+                      borderColor: 'divider',
+                      bgcolor: 'background.paper',
+                    }}
                   />
                 </TableContainer>
               </>

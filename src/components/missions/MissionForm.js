@@ -23,10 +23,73 @@ import { ar } from 'date-fns/locale';
 import axiosInstance from '../../config/axios';
 import MonthPicker from './MonthPicker';
 
+// Styles CSS pour les animations
+const styles = `
+  @keyframes pulse {
+    0% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.2);
+      opacity: 0.7;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  @keyframes shimmer {
+    0% {
+      background-position: -200px 0;
+    }
+    100% {
+      background-position: calc(200px + 100%) 0;
+    }
+  }
+`;
+
+// Configuration personnalisée pour les noms de mois en arabe
+const customArabicLocale = {
+  ...ar,
+  localize: {
+    ...ar.localize,
+    month: (n) => {
+      const months = [
+        'جانفي',
+        'فيفري', 
+        'مارس',
+        'أفريل',
+        'ماي',
+        'جوان',
+        'جويلية',
+        'أوت',
+        'سبتمبر',
+        'أكتوبر',
+        'نوفمبر',
+        'ديسمبر'
+      ];
+      return months[n];
+    }
+  }
+};
+
 // Fonction utilitaire pour formater les dates en grégorien
 const formatGregorianDate = (date) => {
   if (!date) return '';
-  return format(new Date(date), 'dd/MM/yyyy', { locale: ar });
+  return format(new Date(date), 'dd/MM/yyyy', { locale: customArabicLocale });
 };
 
 const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
@@ -229,19 +292,40 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
   };
 
   // Ajout de la fonction de vérification des missions existantes
-  const hasExistingMonthlyMission = (employeeId, selectedMonth) => {
-    if (!selectedMonth) return false;
+  const hasExistingMonthlyMission = async (employeeId, selectedMonth) => {
+    if (!selectedMonth || !employeeId) return false;
     
     const monthStart = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
     const monthEnd = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0);
     
-    return missions.some(mission => 
-      mission.type === 'monthly' &&
-      mission.employee === employeeId &&
-      new Date(mission.startDate) >= monthStart &&
-      new Date(mission.endDate) <= monthEnd &&
-      mission._id !== (mission?._id) // Exclure la mission en cours d'édition
-    );
+    try {
+      const response = await axiosInstance.get('/missions', {
+        params: {
+          employee: employeeId,
+          type: 'monthly',
+          startDate: monthStart.toISOString(),
+          endDate: monthEnd.toISOString()
+        }
+      });
+      
+      // Filtrer les missions qui se chevauchent avec le mois, en excluant la mission en cours d'édition
+      const existingMissions = response.data.filter(mission => {
+        const missionStart = new Date(mission.startDate);
+        const missionEnd = new Date(mission.endDate);
+        
+        return (
+          mission._id !== (mission?._id) && // Exclure la mission en cours d'édition
+          ((missionStart >= monthStart && missionStart <= monthEnd) ||
+           (missionEnd >= monthStart && missionEnd <= monthEnd) ||
+           (missionStart <= monthStart && missionEnd >= monthEnd))
+        );
+      });
+      
+      return existingMissions.length > 0;
+    } catch (error) {
+      console.error('Erreur lors de la vérification des missions existantes:', error);
+      return false;
+    }
   };
 
   // Modification du gestionnaire de soumission
@@ -253,7 +337,7 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
     try {
       // Vérifier si l'employé a déjà une mission mensuelle pour ce mois
       if (formData.type === 'monthly' && formData.employeeId && formData.selectedMonth) {
-        if (hasExistingMonthlyMission(formData.employeeId, formData.selectedMonth)) {
+        if (await hasExistingMonthlyMission(formData.employeeId, formData.selectedMonth)) {
           setError('هذا الموظف لديه بالفعل مهمة شهرية لهذا الشهر');
           setLoading(false);
           return;
@@ -291,13 +375,79 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
   };
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-      <DialogTitle>
+    <Dialog 
+      open={open} 
+      onClose={handleClose} 
+      maxWidth="md" 
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 3,
+          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+          background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+        }
+      }}
+    >
+      <style>{styles}</style>
+      <DialogTitle
+        sx={{
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          color: 'white',
+          textAlign: 'center',
+          fontSize: '1.5rem',
+          fontWeight: 'bold',
+          py: 3,
+          borderTopLeftRadius: 12,
+          borderTopRightRadius: 12,
+          boxShadow: '0 4px 20px rgba(102, 126, 234, 0.3)',
+          position: 'relative',
+          '&::after': {
+            content: '""',
+            position: 'absolute',
+            bottom: 0,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '60px',
+            height: '3px',
+            background: 'linear-gradient(90deg, #ff6b6b, #feca57)',
+            borderRadius: '2px'
+          }
+        }}
+      >
         {mission ? 'تعديل المهمة' : 'إنشاء مهمة جديدة'}
       </DialogTitle>
-      <DialogContent>
-        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-          <Grid container spacing={2}>
+      <DialogContent 
+        sx={{ 
+          p: 4,
+          background: 'rgba(255, 255, 255, 0.9)',
+          backdropFilter: 'blur(10px)',
+          minHeight: '500px'
+        }}
+      >
+        <Box 
+          component="form" 
+          onSubmit={handleSubmit} 
+          sx={{ 
+            mt: 2,
+            '& .MuiTextField-root, & .MuiFormControl-root': {
+              mb: 3,
+              '& .MuiOutlinedInput-root': {
+                borderRadius: 2,
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                },
+                '&.Mui-focused': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 6px 20px rgba(102, 126, 234, 0.2)',
+                }
+              }
+            }
+          }}
+        >
+          <Grid container spacing={3}>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
@@ -306,15 +456,46 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
                 onChange={handleChange('code_mission')}
                 required
                 margin="normal"
+                sx={{
+                  '& .MuiInputLabel-root': {
+                    color: '#667eea',
+                    fontWeight: 600
+                  },
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': {
+                      borderColor: '#e0e6ed',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#667eea',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#667eea',
+                      borderWidth: 2,
+                    }
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth margin="normal">
-                <InputLabel>الموظف</InputLabel>
+                <InputLabel sx={{ color: '#667eea', fontWeight: 600 }}>الموظف</InputLabel>
                 <Select
                   value={formData.employeeId}
                   onChange={handleChange('employeeId')}
                   required
+                  sx={{
+                    borderRadius: 2,
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#e0e6ed',
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#667eea',
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#667eea',
+                      borderWidth: 2,
+                    }
+                  }}
                 >
                   {employees.map((employee) => (
                     <MenuItem key={employee._id} value={employee._id}>
@@ -342,6 +523,17 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
                       label={option}
                       {...getTagProps({ index })}
                       key={index}
+                      sx={{
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        color: 'white',
+                        fontWeight: 600,
+                        '& .MuiChip-deleteIcon': {
+                          color: 'rgba(255, 255, 255, 0.8)',
+                          '&:hover': {
+                            color: 'white',
+                          }
+                        }
+                      }}
                     />
                   ))
                 }
@@ -352,17 +544,48 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
                     placeholder="أضف وجهة"
                     margin="normal"
                     required
+                    sx={{
+                      '& .MuiInputLabel-root': {
+                        color: '#667eea',
+                        fontWeight: 600
+                      },
+                      '& .MuiOutlinedInput-root': {
+                        '& fieldset': {
+                          borderColor: '#e0e6ed',
+                        },
+                        '&:hover fieldset': {
+                          borderColor: '#667eea',
+                        },
+                        '&.Mui-focused fieldset': {
+                          borderColor: '#667eea',
+                          borderWidth: 2,
+                        }
+                      }
+                    }}
                   />
                 )}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth margin="normal">
-                <InputLabel>نوع المهمة</InputLabel>
+                <InputLabel sx={{ color: '#667eea', fontWeight: 600 }}>نوع المهمة</InputLabel>
                 <Select
                   value={formData.type}
                   onChange={handleTypeChange}
                   required
+                  sx={{
+                    borderRadius: 2,
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#e0e6ed',
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#667eea',
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#667eea',
+                      borderWidth: 2,
+                    }
+                  }}
                 >
                   <MenuItem value="monthly">مهمة شهرية</MenuItem>
                   <MenuItem value="special">مهمة خاصة</MenuItem>
@@ -371,25 +594,46 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
             </Grid>
             {formData.type === 'monthly' ? (
               <Grid item xs={12}>
-                <MonthPicker
-                  value={formData.selectedMonth}
-                  onChange={(date, error) => {
-                    setFormData(prev => ({
-                      ...prev,
-                      selectedMonth: date,
-                      startDate: date ? new Date(date.getFullYear(), date.getMonth(), 1) : null,
-                      endDate: date ? new Date(date.getFullYear(), date.getMonth() + 1, 0) : null
-                    }));
-                    setError(error);
+                <Box
+                  sx={{
+                    p: 3,
+                    borderRadius: 3,
+                    background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                    boxShadow: '0 4px 15px rgba(240, 147, 251, 0.3)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: '2px',
+                      background: 'linear-gradient(90deg, #ff6b6b, #feca57, #48dbfb)',
+                    }
                   }}
-                  error={error}
-                  showValidationErrors={true}
-                />
+                >
+                  <MonthPicker
+                    value={formData.selectedMonth}
+                    onChange={(date, error) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        selectedMonth: date,
+                        startDate: date ? new Date(date.getFullYear(), date.getMonth(), 1) : null,
+                        endDate: date ? new Date(date.getFullYear(), date.getMonth() + 1, 0) : null
+                      }));
+                      setError(error);
+                    }}
+                    error={error}
+                    showValidationErrors={true}
+                  />
+                </Box>
               </Grid>
             ) : (
               <>
                 <Grid item xs={12} sm={6}>
-                  <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ar}>
+                  <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={customArabicLocale}>
                     <DatePicker
                       label="تاريخ البداية"
                       value={formData.startDate}
@@ -397,14 +641,49 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
                       format="dd/MM/yyyy"
                       slotProps={{
                         textField: {
-                          fullWidth: true
+                          fullWidth: true,
+                          size: "small",
+                          sx: {
+                            '& .MuiInputBase-root': {
+                              fontSize: '0.875rem',
+                              height: '40px'
+                            },
+                            '& .MuiInputLabel-root': {
+                              fontSize: '0.875rem',
+                              color: '#667eea',
+                              fontWeight: 600
+                            },
+                            '& .MuiOutlinedInput-root': {
+                              '& fieldset': {
+                                borderColor: '#e0e6ed',
+                              },
+                              '&:hover fieldset': {
+                                borderColor: '#667eea',
+                              },
+                              '&.Mui-focused fieldset': {
+                                borderColor: '#667eea',
+                                borderWidth: 2,
+                              }
+                            }
+                          }
+                        },
+                        popper: {
+                          sx: {
+                            '& .MuiPickersMonth-root': {
+                              fontSize: '0.875rem',
+                              minHeight: '36px'
+                            },
+                            '& .MuiPickersYear-yearButton': {
+                              fontSize: '0.875rem'
+                            }
+                          }
                         }
                       }}
                     />
                   </LocalizationProvider>
                 </Grid>
                 <Grid item xs={12} sm={6}>
-                  <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ar}>
+                  <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={customArabicLocale}>
                     <DatePicker
                       label="تاريخ النهاية"
                       value={formData.endDate}
@@ -412,7 +691,42 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
                       format="dd/MM/yyyy"
                       slotProps={{
                         textField: {
-                          fullWidth: true
+                          fullWidth: true,
+                          size: "small",
+                          sx: {
+                            '& .MuiInputBase-root': {
+                              fontSize: '0.875rem',
+                              height: '40px'
+                            },
+                            '& .MuiInputLabel-root': {
+                              fontSize: '0.875rem',
+                              color: '#667eea',
+                              fontWeight: 600
+                            },
+                            '& .MuiOutlinedInput-root': {
+                              '& fieldset': {
+                                borderColor: '#e0e6ed',
+                              },
+                              '&:hover fieldset': {
+                                borderColor: '#667eea',
+                              },
+                              '&.Mui-focused fieldset': {
+                                borderColor: '#667eea',
+                                borderWidth: 2,
+                              }
+                            }
+                          }
+                        },
+                        popper: {
+                          sx: {
+                            '& .MuiPickersMonth-root': {
+                              fontSize: '0.875rem',
+                              minHeight: '36px'
+                            },
+                            '& .MuiPickersYear-yearButton': {
+                              fontSize: '0.875rem'
+                            }
+                          }
                         }
                       }}
                     />
@@ -422,11 +736,24 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
             )}
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth margin="normal">
-                <InputLabel>الحالة</InputLabel>
+                <InputLabel sx={{ color: '#667eea', fontWeight: 600 }}>الحالة</InputLabel>
                 <Select
                   value={formData.status}
                   onChange={handleChange('status')}
                   required
+                  sx={{
+                    borderRadius: 2,
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#e0e6ed',
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#667eea',
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#667eea',
+                      borderWidth: 2,
+                    }
+                  }}
                 >
                   <MenuItem value="active">نشطة</MenuItem>
                   <MenuItem value="completed">مكتملة</MenuItem>
@@ -443,23 +770,104 @@ const MissionForm = ({ open, handleClose, mission = null, onSuccess }) => {
                 multiline
                 rows={4}
                 margin="normal"
+                sx={{
+                  '& .MuiInputLabel-root': {
+                    color: '#667eea',
+                    fontWeight: 600
+                  },
+                  '& .MuiOutlinedInput-root': {
+                    '& fieldset': {
+                      borderColor: '#e0e6ed',
+                    },
+                    '&:hover fieldset': {
+                      borderColor: '#667eea',
+                    },
+                    '&.Mui-focused fieldset': {
+                      borderColor: '#667eea',
+                      borderWidth: 2,
+                    }
+                  }
+                }}
               />
             </Grid>
           </Grid>
           {error && (
-            <Box sx={{ color: 'error.main', mt: 2 }}>
+            <Box 
+              sx={{ 
+                color: '#f44336',
+                mt: 3,
+                p: 2,
+                borderRadius: 2,
+                background: 'rgba(244, 67, 54, 0.1)',
+                border: '1px solid rgba(244, 67, 54, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1
+              }}
+            >
+              <Box
+                sx={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: '50%',
+                  background: '#f44336',
+                  animation: 'pulse 2s infinite'
+                }}
+              />
               {error}
             </Box>
           )}
         </Box>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={handleClose}>إلغاء</Button>
+      <DialogActions
+        sx={{
+          p: 3,
+          background: 'rgba(255, 255, 255, 0.9)',
+          borderTop: '1px solid rgba(0, 0, 0, 0.1)',
+          borderBottomLeftRadius: 12,
+          borderBottomRightRadius: 12,
+        }}
+      >
+        <Button 
+          onClick={handleClose}
+          sx={{
+            borderRadius: 2,
+            px: 4,
+            py: 1.5,
+            background: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
+            color: 'white',
+            fontWeight: 600,
+            '&:hover': {
+              background: 'linear-gradient(135deg, #ff8a8e 0%, #febfdf 100%)',
+              transform: 'translateY(-2px)',
+              boxShadow: '0 4px 12px rgba(255, 154, 158, 0.4)',
+            }
+          }}
+        >
+          إلغاء
+        </Button>
         <Button
           type="submit"
           variant="contained"
-          color="primary"
           disabled={loading}
+          sx={{
+            borderRadius: 2,
+            px: 4,
+            py: 1.5,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: 'white',
+            fontWeight: 600,
+            '&:hover': {
+              background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+              transform: 'translateY(-2px)',
+              boxShadow: '0 6px 20px rgba(102, 126, 234, 0.4)',
+            },
+            '&:disabled': {
+              background: 'linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%)',
+              transform: 'none',
+              boxShadow: 'none',
+            }
+          }}
         >
           {loading ? 'جاري الحفظ...' : mission ? 'تحديث' : 'حفظ'}
         </Button>
