@@ -352,6 +352,11 @@ const Employees = () => {
     const sexeMatch = filters.sexe === 'all' || employee.sexe === filters.sexe;
 
     return searchMatch && statusMatch && centreMatch && posteMatch && sexeMatch;
+  }).sort((a, b) => {
+    // Trier par code employé (matricule) en ordre croissant
+    const matriculeA = a.matricule || '';
+    const matriculeB = b.matricule || '';
+    return matriculeA.localeCompare(matriculeB, undefined, { numeric: true, sensitivity: 'base' });
   });
 
   const handleOpenForm = (employee = null) => {
@@ -694,20 +699,11 @@ const Employees = () => {
       </Box>
 
       {openForm && (
-        <Box 
-          ref={formRef} 
-          sx={{ 
-            width: '100%',
-            mt: 3,
-            mb: 3
-          }}
-        >
-          <EmployeeForm 
-            open={openForm} 
-            onClose={handleCloseForm}
-            employee={selectedEmployee}
-          />
-        </Box>
+        <EmployeeForm 
+          open={openForm} 
+          onClose={handleCloseForm}
+          employee={selectedEmployee}
+        />
       )}
 
       {hoveredEmployee && (
