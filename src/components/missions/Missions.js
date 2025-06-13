@@ -42,6 +42,7 @@ import {
   Fade,
   Stack,
   Alert,
+  CircularProgress,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -126,6 +127,7 @@ const Missions = () => {
   const [showCreateMissionButton, setShowCreateMissionButton] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: 'code_mission', direction: 'asc' });
   const [employeesWithExistingMissions, setEmployeesWithExistingMissions] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // États pour les dialogues
   const [formOpen, setFormOpen] = useState(false);
@@ -461,12 +463,13 @@ const Missions = () => {
 
   // Modification de la fonction handleCreateGroupMission
   const handleCreateGroupMission = async () => {
-    if (!formValid) {
+    if (!formValid || isSubmitting) {
       setShowValidationErrors(true);
       return;
     }
 
     try {
+      setIsSubmitting(true);
       setLoading(true);
       setError(null);
 
@@ -545,6 +548,7 @@ const Missions = () => {
       setError(error.response?.data?.message || 'Une erreur est survenue lors de la création des missions');
     } finally {
       setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -990,13 +994,6 @@ const Missions = () => {
             <Typography variant="h4" component="h1">
               المهام
             </Typography>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => handleOpenForm()}
-            >
-              إضافة مهمة
-            </Button>
           </Box>
 
           <Paper sx={{ mb: 2 }}>
@@ -1523,8 +1520,8 @@ const Missions = () => {
                     <Button 
                       onClick={handleCreateGroupMission}
                       variant="contained" 
-                      startIcon={<SaveIcon />}
-                      disabled={!formValid}
+                      startIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+                      disabled={!formValid || isSubmitting}
                       sx={{
                         borderRadius: 2,
                         textTransform: 'none',
@@ -1532,10 +1529,13 @@ const Missions = () => {
                         background: 'linear-gradient(135deg, #1976d2 0%, #2196f3 100%)',
                         '&:hover': {
                           background: 'linear-gradient(135deg, #1565c0 0%, #1976d2 100%)',
+                        },
+                        '& .MuiCircularProgress-root': {
+                          color: 'white',
                         }
                       }}
                     >
-                      إنشاء المهمة
+                      {isSubmitting ? 'جاري الإنشاء...' : 'إنشاء المهمة'}
                     </Button>
                   </Box>
                 </Box>
