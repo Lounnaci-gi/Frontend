@@ -21,7 +21,9 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import axiosInstance from '../../config/axios';
-import MonthPicker from './MonthPicker';
+
+// Importation dynamique de MonthPicker pour éviter les dépendances circulaires
+const MonthPicker = React.lazy(() => import('./MonthPicker'));
 
 // Styles CSS pour les animations
 const styles = `

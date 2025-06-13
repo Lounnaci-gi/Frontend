@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo, useRef, Suspense } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
@@ -36,6 +36,12 @@ import {
   Tooltip,
   Grid,
   Autocomplete,
+  Card,
+  CardContent,
+  Avatar,
+  Fade,
+  Stack,
+  Alert,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -47,6 +53,9 @@ import {
   QrCode as QrCodeIcon,
   Person as PersonIcon,
   Assignment as AssignmentIcon,
+  Save as SaveIcon,
+  Cancel as CancelIcon,
+  Group as GroupIcon,
 } from '@mui/icons-material';
 import { fetchMissionsStart, fetchMissionsSuccess, fetchMissionsFailure } from '../../store/slices/missionsSlice';
 import axiosInstance from '../../config/axios';
@@ -58,7 +67,9 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { useReactToPrint } from 'react-to-print';
 import MissionPrint from './MissionPrint';
-import MonthPicker from './MonthPicker';
+
+// Importation dynamique de MonthPicker pour éviter les dépendances circulaires
+const MonthPicker = React.lazy(() => import('./MonthPicker'));
 
 // Fonction utilitaire pour formater les dates en grégorien
 const formatGregorianDate = (date) => {
@@ -1154,128 +1165,24 @@ const Missions = () => {
           </Dialog>
 
           {/* Dialog pour la création de mission groupée */}
-          <Dialog
-            open={groupMissionDialogOpen}
-            onClose={() => {
-              setGroupMissionDialogOpen(false);
-              setSelectedEmployees([]);
-              setSelectedDestinations([]);
-              setDestinationInput('');
-              setSelectedTransportMode('');
-              setTransportModeInput('');
-              setSelectedMonth(null);
-              setMissionDates({ startDate: null, endDate: null });
-              setError(null);
-              setFormValid(false);
-              setShowValidationErrors(false);
-            }}
-            maxWidth="md"
-            fullWidth
-          >
-            <DialogTitle>
-              إنشاء مهمة جماعية
-              <Typography variant="subtitle1" sx={{ mt: 1, color: 'text.secondary' }}>
-                عدد الموظفين المحددين: {selectedEmployees.length}
-              </Typography>
-            </DialogTitle>
-            <DialogContent sx={{ p: 3 }}>
-              <Grid container spacing={3}>
-                <Grid item xs={12}>
-                  <MonthPicker
-                    value={selectedMonth}
-                    onChange={(date, error) => {
-                      setSelectedMonth(date);
-                      setError(error);
-                      if (date) {
-                        const startDate = new Date(date.getFullYear(), date.getMonth(), 1);
-                        const endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-                        setMissionDates({ startDate, endDate });
-                      } else {
-                        setMissionDates({ startDate: null, endDate: null });
-                      }
-                    }}
-                    error={error}
-                    showValidationErrors={showValidationErrors}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <Autocomplete
-                    multiple
-                    options={[]}
-                    freeSolo
-                    value={selectedDestinations}
-                    onChange={handleDestinationChange}
-                    renderTags={(value, getTagProps) =>
-                      value.map((option, index) => (
-                        <Chip
-                          label={option}
-                          {...getTagProps({ index })}
-                          key={index}
-                        />
-                      ))
-                    }
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="الوجهات"
-                        placeholder="أضف وجهة"
-                        required
-                        helperText={showValidationErrors && selectedDestinations.length === 0 ? 'يرجى تحديد وجهة واحدة على الأقل' : ''}
-                        value={destinationInput}
-                        onChange={(e) => handleInputTextChange(e, setDestinationInput)}
-                        onKeyDown={(e) => handleInputKeyDown(e, destinationInput, setDestinationInput, setSelectedDestinations, true)}
-                        onBlur={() => handleInputBlur(destinationInput, setDestinationInput, setSelectedDestinations, true)}
-                        inputProps={{
-                          ...params.inputProps,
-                          onPaste: (e) => handleInputPaste(e, setDestinationInput),
-                        }}
-                      />
-                    )}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <Autocomplete
-                    freeSolo
-                    options={transportModes}
-                    value={selectedTransportMode}
-                    onChange={handleTransportModeChange}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="وسيلة النقل"
-                        required
-                        helperText={showValidationErrors && (!selectedTransportMode || selectedTransportMode.trim() === '') ? 'يرجى تحديد وسيلة النقل' : ''}
-                        placeholder="أضف وسيلة نقل"
-                        value={transportModeInput}
-                        onChange={(e) => handleInputTextChange(e, setTransportModeInput)}
-                        onKeyDown={(e) => handleInputKeyDown(e, transportModeInput, setTransportModeInput, setSelectedTransportMode, false, transportModes)}
-                        onBlur={() => handleInputBlur(transportModeInput, setTransportModeInput, setSelectedTransportMode, false, transportModes)}
-                        inputProps={{
-                          ...params.inputProps,
-                          onPaste: (e) => handleInputPaste(e, setTransportModeInput),
-                        }}
-                      />
-                    )}
-                  />
-                </Grid>
-              </Grid>
-              {error && (
-                <Box sx={{ color: 'error.main', mt: 2 }}>
-                  {error}
-                </Box>
-              )}
-            </DialogContent>
-            <DialogActions>
-              <Button
-                onClick={handleCreateGroupMission}
-                variant="contained"
-                color="primary"
-                disabled={!formValid}
-              >
-                إنشاء المهمة
-              </Button>
-              <Button 
-                onClick={() => {
+          <Fade in={groupMissionDialogOpen} timeout={300}>
+            <Box
+              sx={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                bgcolor: 'rgba(0,0,0,0.5)',
+                zIndex: 1300,
+                display: groupMissionDialogOpen ? 'flex' : 'none',
+                alignItems: 'center',
+                justifyContent: 'center',
+                p: 2,
+                overflow: 'auto',
+              }}
+              onClick={(e) => {
+                if (e.target === e.currentTarget) {
                   setGroupMissionDialogOpen(false);
                   setSelectedEmployees([]);
                   setSelectedDestinations([]);
@@ -1287,14 +1194,332 @@ const Missions = () => {
                   setError(null);
                   setFormValid(false);
                   setShowValidationErrors(false);
+                }
+              }}
+            >
+              <Box
+                sx={{
+                  width: '100%',
+                  maxWidth: '800px',
+                  mx: 'auto',
+                  bgcolor: 'background.paper',
+                  borderRadius: 3,
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.1)',
+                  overflow: 'hidden',
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  position: 'relative',
+                  maxHeight: '90vh',
+                  overflowY: 'auto',
                 }}
-                variant="outlined"
-                color="error"
               >
-                إلغاء
-              </Button>
-            </DialogActions>
-          </Dialog>
+                {/* Header avec dégradé */}
+                <Box
+                  sx={{
+                    background: 'linear-gradient(135deg, #1976d2 0%, #2196f3 100%)',
+                    color: 'white',
+                    p: 3,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                  }}
+                >
+                  <Avatar
+                    sx={{
+                      bgcolor: 'rgba(255,255,255,0.2)',
+                      width: 56,
+                      height: 56,
+                    }}
+                  >
+                    <GroupIcon />
+                  </Avatar>
+                  <Box>
+                    <Typography variant="h5" sx={{ fontWeight: 600, mb: 0.5 }}>
+                      إنشاء مهمة جماعية
+                    </Typography>
+                    <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                      عدد الموظفين المحددين: {selectedEmployees.length}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                <Box sx={{ p: 4 }}>
+                  <Grid container spacing={4}>
+                    {/* Section 1: Informations de base */}
+                    <Grid item xs={12} md={6}>
+                      <Card
+                        elevation={0}
+                        sx={{
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          borderRadius: 2,
+                          height: '100%',
+                        }}
+                      >
+                        <CardContent sx={{ p: 3 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 1 }}>
+                            <AssignmentIcon color="primary" />
+                            <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                              معلومات المهمة
+                            </Typography>
+                          </Box>
+
+                          <Stack spacing={3}>
+                            {/* Sélection du mois */}
+                            <Box>
+                              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                                الشهر المطلوب
+                              </Typography>
+                              <Suspense fallback={<Box sx={{ height: 56, bgcolor: 'grey.100', borderRadius: 1 }} />}>
+                                <MonthPicker
+                                  value={selectedMonth}
+                                  onChange={(date, error) => {
+                                    setSelectedMonth(date);
+                                    setError(error);
+                                    if (date) {
+                                      const startDate = new Date(date.getFullYear(), date.getMonth(), 1);
+                                      const endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+                                      setMissionDates({ startDate, endDate });
+                                    } else {
+                                      setMissionDates({ startDate: null, endDate: null });
+                                    }
+                                  }}
+                                  error={error}
+                                  showValidationErrors={showValidationErrors}
+                                />
+                              </Suspense>
+                            </Box>
+
+                            {/* Destinations */}
+                            <Box>
+                              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                                الوجهات
+                              </Typography>
+                              <Autocomplete
+                                multiple
+                                options={[]}
+                                freeSolo
+                                value={selectedDestinations}
+                                onChange={handleDestinationChange}
+                                renderTags={(value, getTagProps) =>
+                                  value.map((option, index) => (
+                                    <Chip
+                                      label={option}
+                                      {...getTagProps({ index })}
+                                      key={index}
+                                      sx={{ borderRadius: 1 }}
+                                    />
+                                  ))
+                                }
+                                renderInput={(params) => (
+                                  <TextField
+                                    {...params}
+                                    placeholder="أضف وجهة"
+                                    required
+                                    helperText={showValidationErrors && selectedDestinations.length === 0 ? 'يرجى تحديد وجهة واحدة على الأقل' : ''}
+                                    value={destinationInput}
+                                    onChange={(e) => handleInputTextChange(e, setDestinationInput)}
+                                    onKeyDown={(e) => handleInputKeyDown(e, destinationInput, setDestinationInput, setSelectedDestinations, true)}
+                                    onBlur={() => handleInputBlur(destinationInput, setDestinationInput, setSelectedDestinations, true)}
+                                    sx={{
+                                      '& .MuiOutlinedInput-root': {
+                                        borderRadius: 2,
+                                      }
+                                    }}
+                                    inputProps={{
+                                      ...params.inputProps,
+                                      onPaste: (e) => handleInputPaste(e, setDestinationInput),
+                                    }}
+                                  />
+                                )}
+                              />
+                            </Box>
+
+                            {/* Mode de transport */}
+                            <Box>
+                              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600 }}>
+                                وسيلة النقل
+                              </Typography>
+                              <Autocomplete
+                                freeSolo
+                                options={transportModes}
+                                value={selectedTransportMode}
+                                onChange={handleTransportModeChange}
+                                renderInput={(params) => (
+                                  <TextField
+                                    {...params}
+                                    placeholder="أضف وسيلة نقل"
+                                    required
+                                    helperText={showValidationErrors && (!selectedTransportMode || selectedTransportMode.trim() === '') ? 'يرجى تحديد وسيلة النقل' : ''}
+                                    value={transportModeInput}
+                                    onChange={(e) => handleInputTextChange(e, setTransportModeInput)}
+                                    onKeyDown={(e) => handleInputKeyDown(e, transportModeInput, setTransportModeInput, setSelectedTransportMode, false, transportModes)}
+                                    onBlur={() => handleInputBlur(transportModeInput, setTransportModeInput, setSelectedTransportMode, false, transportModes)}
+                                    sx={{
+                                      '& .MuiOutlinedInput-root': {
+                                        borderRadius: 2,
+                                      }
+                                    }}
+                                    inputProps={{
+                                      ...params.inputProps,
+                                      onPaste: (e) => handleInputPaste(e, setTransportModeInput),
+                                    }}
+                                  />
+                                )}
+                              />
+                            </Box>
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+
+                    {/* Section 2: Résumé et validation */}
+                    <Grid item xs={12} md={6}>
+                      <Card
+                        elevation={0}
+                        sx={{
+                          border: '1px solid',
+                          borderColor: 'divider',
+                          borderRadius: 2,
+                          height: '100%',
+                        }}
+                      >
+                        <CardContent sx={{ p: 3 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3, gap: 1 }}>
+                            <PersonIcon color="primary" />
+                            <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main' }}>
+                              ملخص المهمة
+                            </Typography>
+                          </Box>
+
+                          <Stack spacing={3}>
+                            {/* Informations de la mission */}
+                            <Box>
+                              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: 'text.secondary' }}>
+                                تفاصيل المهمة
+                              </Typography>
+                              <Box sx={{ 
+                                p: 2, 
+                                bgcolor: 'grey.50', 
+                                borderRadius: 2,
+                                border: '1px solid',
+                                borderColor: 'divider'
+                              }}>
+                                <Typography variant="body2" sx={{ mb: 1 }}>
+                                  <strong>عدد الموظفين:</strong> {selectedEmployees.length}
+                                </Typography>
+                                {selectedMonth && (
+                                  <Typography variant="body2" sx={{ mb: 1 }}>
+                                    <strong>الشهر:</strong> {format(selectedMonth, 'MMMM yyyy', { locale: ar })}
+                                  </Typography>
+                                )}
+                                {selectedDestinations.length > 0 && (
+                                  <Typography variant="body2" sx={{ mb: 1 }}>
+                                    <strong>الوجهات:</strong> {selectedDestinations.join('، ')}
+                                  </Typography>
+                                )}
+                                {selectedTransportMode && (
+                                  <Typography variant="body2">
+                                    <strong>وسيلة النقل:</strong> {selectedTransportMode}
+                                  </Typography>
+                                )}
+                              </Box>
+                            </Box>
+
+                            {/* Messages d'erreur */}
+                            {error && (
+                              <Alert 
+                                severity="error" 
+                                sx={{ 
+                                  borderRadius: 2,
+                                }}
+                              >
+                                {error}
+                              </Alert>
+                            )}
+
+                            {/* Validation du formulaire */}
+                            <Box>
+                              <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 600, color: 'text.secondary' }}>
+                                حالة التحقق
+                              </Typography>
+                              <Box sx={{ 
+                                p: 2, 
+                                bgcolor: formValid ? 'success.50' : 'warning.50', 
+                                borderRadius: 2,
+                                border: '1px solid',
+                                borderColor: formValid ? 'success.200' : 'warning.200'
+                              }}>
+                                <Typography variant="body2" sx={{ 
+                                  color: formValid ? 'success.main' : 'warning.main',
+                                  fontWeight: 600
+                                }}>
+                                  {formValid ? '✓ النموذج صالح' : '⚠ يرجى إكمال جميع الحقول المطلوبة'}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          </Stack>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+                  </Grid>
+
+                  {/* Actions */}
+                  <Box sx={{ 
+                    display: 'flex',
+                    justifyContent: 'flex-end', 
+                    gap: 2,
+                    mt: 4,
+                    pt: 3,
+                    borderTop: '1px solid',
+                    borderColor: 'divider',
+                  }}>
+                    <Button
+                      onClick={() => {
+                        setGroupMissionDialogOpen(false);
+                        setSelectedEmployees([]);
+                        setSelectedDestinations([]);
+                        setDestinationInput('');
+                        setSelectedTransportMode('');
+                        setTransportModeInput('');
+                        setSelectedMonth(null);
+                        setMissionDates({ startDate: null, endDate: null });
+                        setError(null);
+                        setFormValid(false);
+                        setShowValidationErrors(false);
+                      }}
+                      variant="outlined"
+                      startIcon={<CancelIcon />}
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        px: 3,
+                      }}
+                    >
+                      إلغاء
+                    </Button>
+                    <Button 
+                      onClick={handleCreateGroupMission}
+                      variant="contained" 
+                      startIcon={<SaveIcon />}
+                      disabled={!formValid}
+                      sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        px: 4,
+                        background: 'linear-gradient(135deg, #1976d2 0%, #2196f3 100%)',
+                        '&:hover': {
+                          background: 'linear-gradient(135deg, #1565c0 0%, #1976d2 100%)',
+                        }
+                      }}
+                    >
+                      إنشاء المهمة
+                    </Button>
+                  </Box>
+                </Box>
+              </Box>
+            </Box>
+          </Fade>
         </Box>
       </Box>
     </LocalizationProvider>
