@@ -560,10 +560,10 @@ const Missions = () => {
 
   // Fonction pour gérer les événements clavier
   const handleInputKeyDown = (event, inputState, setInputState, setSelectedState, isMultiple = false, optionsList = null) => {
-    // Gérer la touche Backspace
+    // Gérer la touche Backspace seulement quand le champ est vide
     if (event.key === 'Backspace' && inputState === '') {
       if (isMultiple) {
-        // Pour les destinations multiples
+        // Pour les destinations multiples, supprimer la dernière destination
         setSelectedState(prev => {
           const newState = [...prev];
           newState.pop();
@@ -574,6 +574,12 @@ const Missions = () => {
         setSelectedState('');
       }
       return;
+    }
+
+    // Permettre tous les caractères de contrôle (Backspace, Delete, etc.) pour l'édition normale
+    if (event.ctrlKey || event.metaKey || event.altKey || 
+        ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Tab'].includes(event.key)) {
+      return; // Laisser passer les touches de contrôle
     }
 
     const latinPattern = /[a-zA-Z]/;
@@ -612,30 +618,48 @@ const Missions = () => {
   // Fonction pour gérer les changements de texte
   const handleInputTextChange = (event, setInputState) => {
     const typedText = event.target.value;
-    if (isArabicText(typedText)) {
-      setInputState(typedText);
-      setError(null);
-    } else {
+    
+    // Vérifier s'il y a des caractères latins
+    const latinPattern = /[a-zA-Z]/;
+    if (latinPattern.test(typedText)) {
       setError('يرجى استخدام الأحرف العربية فقط');
+      return; // Ne pas mettre à jour l'état si il y a des caractères latins
     }
+    
+    // Permettre tous les autres caractères (arabe, chiffres, espaces, ponctuation)
+    setInputState(typedText);
+    setError(null);
   };
 
   // Fonction pour gérer le collage de texte
   const handleInputPaste = (e, setInputState) => {
     e.preventDefault();
     const pastedText = e.clipboardData.getData('text');
-    if (isArabicText(pastedText)) {
-      setInputState(pastedText);
-      setError(null);
-    } else {
+    
+    // Vérifier s'il y a des caractères latins
+    const latinPattern = /[a-zA-Z]/;
+    if (latinPattern.test(pastedText)) {
       setError('يرجى استخدام الأحرف العربية فقط');
+      return;
     }
+    
+    // Permettre le collage de texte arabe
+    setInputState(pastedText);
+    setError(null);
   };
 
   // Fonction pour gérer la perte de focus
   const handleInputBlur = (inputState, setInputState, setSelectedState, isMultiple = false, optionsList = null) => {
     const typedText = inputState.trim();
-    if (typedText !== '' && isArabicText(typedText)) {
+    if (typedText !== '') {
+      // Vérifier s'il y a des caractères latins
+      const latinPattern = /[a-zA-Z]/;
+      if (latinPattern.test(typedText)) {
+        setError('يرجى استخدام الأحرف العربية فقط');
+        return;
+      }
+      
+      // Ajouter le texte valide
       if (isMultiple) {
         setSelectedState(prev => {
           if (!prev.includes(typedText)) {
@@ -651,8 +675,6 @@ const Missions = () => {
       }
       setInputState('');
       setError(null);
-    } else if (typedText !== '' && !isArabicText(typedText)) {
-      setError('يرجى استخدام الأحرف العربية فقط');
     }
   };
 
