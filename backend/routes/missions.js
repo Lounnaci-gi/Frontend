@@ -23,6 +23,9 @@ const auth = async (req, res, next) => {
 
 // Routes CRUD pour les missions
 router.post('/', auth, async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { destinations, ...missionData } = req.body;
     console.log('Données reçues:', { destinations, ...missionData });
@@ -31,6 +34,7 @@ router.post('/', auth, async (req, res) => {
     if (missionData.code_mission) {
       const existingMission = await Mission.findOne({ code_mission: missionData.code_mission });
       if (existingMission) {
+        await session.abortTransaction();
         return res.status(400).json({ 
           message: `Le code de mission ${missionData.code_mission} existe déjà`,
           code: 'DUPLICATE_CODE'
@@ -38,7 +42,7 @@ router.post('/', auth, async (req, res) => {
       }
     }
 
-    // Validation pour les missions mensuelles : vérifier qu'un employé n'a qu'une seule mission par mois
+    // Validation pour les missions mensuelles
     if (missionData.type === 'monthly' && missionData.employee && missionData.startDate && missionData.endDate) {
       const startDate = new Date(missionData.startDate);
       const startOfMonth = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
@@ -59,6 +63,7 @@ router.post('/', auth, async (req, res) => {
       });
       
       if (existingMonthlyMission) {
+        await session.abortTransaction();
         const monthName = startDate.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
         return res.status(400).json({ 
           message: `L'employé a déjà une mission mensuelle pour ${monthName}`,
@@ -67,7 +72,15 @@ router.post('/', auth, async (req, res) => {
       }
     }
 
-    // Créer les destinations si elles n'existent pas
+    // Créer la mission d'abord
+    const newMission = new Mission({
+      ...missionData,
+      destinations: [] // On commence avec un tableau vide
+    });
+
+    const mission = await newMission.save({ session });
+
+    // Ensuite, créer les destinations et les lier à la mission
     const createdDestinations = await Promise.all(
       destinations.map(async (dest) => {
         try {
@@ -86,7 +99,7 @@ router.post('/', auth, async (req, res) => {
               city: dest.city || 'Alger',
               country: dest.country || 'Algeria'
             });
-            location = await newLocation.save();
+            location = await newLocation.save({ session });
             console.log('Nouvelle destination créée:', location);
           } else {
             console.log('Destination existante trouvée:', location);
@@ -100,50 +113,29 @@ router.post('/', auth, async (req, res) => {
       })
     );
 
-    console.log('IDs des destinations créées/récupérées:', createdDestinations);
+    // Mettre à jour la mission avec les IDs des destinations
+    mission.destinations = createdDestinations;
+    await mission.save({ session });
 
-    try {
-      // Créer la mission avec les IDs des destinations
-      const newMission = new Mission({
-        ...missionData,
-        destinations: createdDestinations
-      });
+    // Valider la transaction
+    await session.commitTransaction();
 
-      const mission = await newMission.save();
-      console.log('Mission créée:', mission);
-
-      // Populer les références
-      const populatedMission = await Mission.findById(mission._id)
-        .populate('employee')
-        .populate('destinations');
-      
-      console.log('Mission avec destinations populées:', {
-        id: populatedMission._id,
-        code_mission: populatedMission.code_mission,
-        destinations: populatedMission.destinations.map(d => ({
-          id: d._id,
-          name: d.name,
-          type: d.type
-        }))
-      });
-      
-      res.status(201).json(populatedMission);
-    } catch (error) {
-      // Si c'est une erreur de clé dupliquée
-      if (error.code === 11000) {
-        return res.status(400).json({ 
-          message: 'Ce code de mission existe déjà. Veuillez réessayer.',
-          code: 'DUPLICATE_CODE'
-        });
-      }
-      throw error;
-    }
+    // Populer les références pour la réponse
+    const populatedMission = await Mission.findById(mission._id)
+      .populate('employee')
+      .populate('destinations');
+    
+    res.status(201).json(populatedMission);
   } catch (error) {
+    // En cas d'erreur, annuler la transaction
+    await session.abortTransaction();
     console.error('Erreur lors de la création de la mission:', error);
     res.status(400).json({ 
       message: error.message,
       code: error.code || 'UNKNOWN_ERROR'
     });
+  } finally {
+    session.endSession();
   }
 });
 

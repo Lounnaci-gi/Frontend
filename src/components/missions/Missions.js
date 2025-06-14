@@ -462,6 +462,20 @@ const Missions = () => {
     );
   };
 
+  // Fonction pour réinitialiser le formulaire
+  const resetForm = () => {
+    setSelectedEmployees([]);
+    setSelectedDestinations([]);
+    setDestinationInput('');
+    setSelectedTransportMode('');
+    setTransportModeInput('');
+    setSelectedMonth(null);
+    setMissionDates({ startDate: null, endDate: null });
+    setError(null);
+    setFormValid(false);
+    setShowValidationErrors(false);
+  };
+
   // Modification de la fonction handleCreateGroupMission
   const handleCreateGroupMission = async () => {
     if (!formValid || isSubmitting) {
@@ -530,16 +544,7 @@ const Missions = () => {
 
       if (createdMissions.length > 0) {
         setGroupMissionDialogOpen(false);
-        setSelectedEmployees([]);
-        setSelectedDestinations([]);
-        setDestinationInput('');
-        setSelectedTransportMode('');
-        setTransportModeInput('');
-        setSelectedMonth(null);
-        setMissionDates({ startDate: null, endDate: null });
-        setError(null);
-        setFormValid(false);
-        setShowValidationErrors(false);
+        resetForm(); // Réinitialiser le formulaire
         
         dispatch(fetchMissionsStart());
         const missionsResponse = await axiosInstance.get('/missions');
@@ -1217,16 +1222,7 @@ const Missions = () => {
               onClick={(e) => {
                 if (e.target === e.currentTarget) {
                   setGroupMissionDialogOpen(false);
-                  setSelectedEmployees([]);
-                  setSelectedDestinations([]);
-                  setDestinationInput('');
-                  setSelectedTransportMode('');
-                  setTransportModeInput('');
-                  setSelectedMonth(null);
-                  setMissionDates({ startDate: null, endDate: null });
-                  setError(null);
-                  setFormValid(false);
-                  setShowValidationErrors(false);
+                  resetForm(); // Réinitialiser le formulaire lors de la fermeture
                 }
               }}
             >
@@ -1510,16 +1506,7 @@ const Missions = () => {
                     <Button
                       onClick={() => {
                         setGroupMissionDialogOpen(false);
-                        setSelectedEmployees([]);
-                        setSelectedDestinations([]);
-                        setDestinationInput('');
-                        setSelectedTransportMode('');
-                        setTransportModeInput('');
-                        setSelectedMonth(null);
-                        setMissionDates({ startDate: null, endDate: null });
-                        setError(null);
-                        setFormValid(false);
-                        setShowValidationErrors(false);
+                        resetForm(); // Réinitialiser le formulaire lors de la fermeture
                       }}
                       variant="outlined"
                       startIcon={<CancelIcon />}
