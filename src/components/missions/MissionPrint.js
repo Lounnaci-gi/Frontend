@@ -179,6 +179,27 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
       </Typography>
       <Typography variant="body1" sx={{ 
         position: 'absolute',
+        top: '8cm',
+        left: '4cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        width: '3cm'
+      }}>
+        ....................
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '8cm',
+        right: '4cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        width: '3cm',
+        textAlign: 'right'
+      }}>
+        ....................
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
         top: '10cm',
         left: '50%',
         transform: 'translateX(-50%)',
@@ -188,6 +209,27 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         textAlign: 'center'
       }}>
         {employee.prenom || '________________'}
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '10cm',
+        left: '4cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        width: '3cm'
+      }}>
+        ....................
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '10cm',
+        right: '4cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        width: '3cm',
+        textAlign: 'right'
+      }}>
+        ....................
       </Typography>
       <Typography variant="body1" sx={{ 
         position: 'absolute',
@@ -203,6 +245,27 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
       </Typography>
       <Typography variant="body1" sx={{ 
         position: 'absolute',
+        top: '12cm',
+        left: '4cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        width: '3cm'
+      }}>
+        ....................
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '12cm',
+        right: '4cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        width: '3cm',
+        textAlign: 'right'
+      }}>
+        ....................
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
         top: '14cm',
         left: '50%',
         transform: 'translateX(-50%)',
@@ -212,6 +275,27 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         textAlign: 'center'
       }}>
         {employee.poste || employee.fonction || '________________'}
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '14cm',
+        left: '4cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        width: '3cm'
+      }}>
+        ....................
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '14cm',
+        right: '4cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        width: '3cm',
+        textAlign: 'right'
+      }}>
+        ....................
       </Typography>
       <Typography variant="body1" sx={{ 
         position: 'absolute',
@@ -227,6 +311,27 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
       </Typography>
       <Typography variant="body1" sx={{ 
         position: 'absolute',
+        top: '16cm',
+        left: '4cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        width: '3cm'
+      }}>
+        ....................
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '16cm',
+        right: '4cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        width: '3cm',
+        textAlign: 'right'
+      }}>
+        ....................
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
         top: '18cm',
         left: '50%',
         transform: 'translateX(-50%)',
@@ -235,7 +340,28 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         minWidth: '8cm',
         textAlign: 'center'
       }}>
-        {mission.date_depart ? new Date(mission.date_depart).toLocaleDateString('ar-SA') : '________________'}
+        {mission.startDate ? new Date(mission.startDate).toLocaleDateString('fr-FR') : '________________'}
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '18cm',
+        left: '4cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        width: '3cm'
+      }}>
+        ....................
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '18cm',
+        right: '4cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        width: '3cm',
+        textAlign: 'right'
+      }}>
+        ....................
       </Typography>
       <Typography variant="body1" sx={{ 
         position: 'absolute',
@@ -247,7 +373,28 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         minWidth: '8cm',
         textAlign: 'center'
       }}>
-        {mission.date_retour ? new Date(mission.date_retour).toLocaleDateString('ar-SA') : '________________'}
+        {mission.endDate ? new Date(mission.endDate).toLocaleDateString('fr-FR') : '________________'}
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '20cm',
+        left: '4cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        width: '3cm'
+      }}>
+        ....................
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '20cm',
+        right: '4cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        width: '3cm',
+        textAlign: 'right'
+      }}>
+        ....................
       </Typography>
       <Typography variant="body1" sx={{ 
         position: 'absolute',
@@ -263,6 +410,27 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
       </Typography>
       <Typography variant="body1" sx={{ 
         position: 'absolute',
+        top: '22cm',
+        left: '4cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        width: '3cm'
+      }}>
+        ....................
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '22cm',
+        right: '4cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        width: '3cm',
+        textAlign: 'right'
+      }}>
+        ....................
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
         top: '24cm',
         left: '50%',
         transform: 'translateX(-50%)',
@@ -271,7 +439,28 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         minWidth: '8cm',
         textAlign: 'center'
       }}>
-        {mission.destination || '________________'}
+        {mission.destinations && mission.destinations.length > 0 ? mission.destinations[0].name : '________________'}
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '24cm',
+        left: '4cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        width: '3cm'
+      }}>
+        ....................
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '24cm',
+        right: '4cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        width: '3cm',
+        textAlign: 'right'
+      }}>
+        ....................
       </Typography>
 
       {/* Date en bas à droite */}
