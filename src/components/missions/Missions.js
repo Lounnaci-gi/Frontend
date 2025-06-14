@@ -128,6 +128,7 @@ const Missions = () => {
   const [sortConfig, setSortConfig] = useState({ key: 'code_mission', direction: 'asc' });
   const [employeesWithExistingMissions, setEmployeesWithExistingMissions] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [existingDestinations, setExistingDestinations] = useState([]);
 
   // États pour les dialogues
   const [formOpen, setFormOpen] = useState(false);
@@ -775,6 +776,19 @@ const Missions = () => {
     }
   };
 
+  // Charger les destinations existantes
+  useEffect(() => {
+    const fetchDestinations = async () => {
+      try {
+        const response = await axiosInstance.get('/locations/missions');
+        setExistingDestinations(response.data);
+      } catch (error) {
+        console.error('Erreur lors du chargement des destinations:', error);
+      }
+    };
+    fetchDestinations();
+  }, []);
+
   const renderEmployeesList = () => {
     return (
       <>
@@ -1316,7 +1330,7 @@ const Missions = () => {
                               </Typography>
                               <Autocomplete
                                 multiple
-                                options={[]}
+                                options={existingDestinations.map(dest => dest.name)}
                                 freeSolo
                                 value={selectedDestinations}
                                 onChange={handleDestinationChange}

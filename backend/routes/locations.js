@@ -19,6 +19,17 @@ const auth = async (req, res, next) => {
   }
 };
 
+// Route pour obtenir toutes les destinations de type 'mission'
+router.get('/missions', auth, async (req, res) => {
+  try {
+    const locations = await Location.find({ type: 'mission' })
+      .sort({ name: 1 });
+    res.json(locations);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Routes CRUD pour les locations
 router.post('/', auth, async (req, res) => {
   try {
