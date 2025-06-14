@@ -65,7 +65,7 @@ const missionSchema = new mongoose.Schema({
   },
   code: {
     type: String,
-    required: false, // Rendu optionnel
+    required: false,
     unique: true
   },
   type: {
@@ -89,7 +89,8 @@ const missionSchema = new mongoose.Schema({
     required: true
   }],
   transportMode: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Transport',
     required: true
   },
   startDate: {

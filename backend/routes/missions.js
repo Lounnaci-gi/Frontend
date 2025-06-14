@@ -3,6 +3,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const Mission = require('../models/Mission');
 const Location = require('../models/Location');
+const Transport = require('../models/Transport');
 const mongoose = require('mongoose');
 
 // Middleware d'authentification
@@ -27,8 +28,37 @@ router.post('/', auth, async (req, res) => {
   session.startTransaction();
 
   try {
-    const { destinations, ...missionData } = req.body;
-    console.log('Données reçues:', { destinations, ...missionData });
+    const { destinations, transportMode, ...missionData } = req.body;
+    console.log('Données reçues:', { destinations, transportMode, ...missionData });
+
+    // Créer ou récupérer le moyen de transport en premier
+    let transport;
+    if (typeof transportMode === 'string' && transportMode.match(/^[0-9a-fA-F]{24}$/)) {
+      // Si c'est un ID MongoDB valide, chercher directement par ID
+      transport = await Transport.findById(transportMode);
+      console.log('Transport trouvé par ID:', transport);
+    } else {
+      // Sinon, chercher par nom
+      transport = await Transport.findOne({ nom: transportMode });
+      console.log('Recherche de transport par nom:', transportMode);
+      
+      if (!transport) {
+        console.log('Création d\'un nouveau transport:', transportMode);
+        transport = new Transport({ nom: transportMode });
+        await transport.save({ session });
+        console.log('Nouveau transport créé:', transport);
+      } else {
+        console.log('Transport existant trouvé:', transport);
+      }
+    }
+
+    if (!transport) {
+      await session.abortTransaction();
+      return res.status(400).json({ 
+        message: 'Mode de transport invalide',
+        code: 'INVALID_TRANSPORT'
+      });
+    }
 
     // Vérifier si le code_mission existe déjà
     if (missionData.code_mission) {
@@ -72,15 +102,7 @@ router.post('/', auth, async (req, res) => {
       }
     }
 
-    // Créer la mission d'abord
-    const newMission = new Mission({
-      ...missionData,
-      destinations: [] // On commence avec un tableau vide
-    });
-
-    const mission = await newMission.save({ session });
-
-    // Ensuite, créer les destinations et les lier à la mission
+    // Créer les destinations
     const createdDestinations = await Promise.all(
       destinations.map(async (dest) => {
         try {
@@ -113,9 +135,25 @@ router.post('/', auth, async (req, res) => {
       })
     );
 
-    // Mettre à jour la mission avec les IDs des destinations
-    mission.destinations = createdDestinations;
-    await mission.save({ session });
+    // Filtrer les destinations nulles ou undefined
+    const validDestinations = createdDestinations.filter(dest => dest);
+
+    if (validDestinations.length === 0) {
+      await session.abortTransaction();
+      return res.status(400).json({ 
+        message: 'Aucune destination valide n\'a été fournie',
+        code: 'INVALID_DESTINATIONS'
+      });
+    }
+
+    // Créer la mission avec les IDs des destinations et du transport
+    const newMission = new Mission({
+      ...missionData,
+      destinations: validDestinations,
+      transportMode: transport._id
+    });
+
+    const mission = await newMission.save({ session });
 
     // Valider la transaction
     await session.commitTransaction();
@@ -123,7 +161,8 @@ router.post('/', auth, async (req, res) => {
     // Populer les références pour la réponse
     const populatedMission = await Mission.findById(mission._id)
       .populate('employee')
-      .populate('destinations');
+      .populate('destinations')
+      .populate('transportMode');
     
     res.status(201).json(populatedMission);
   } catch (error) {
@@ -141,22 +180,40 @@ router.post('/', auth, async (req, res) => {
 
 router.get('/', auth, async (req, res) => {
   try {
-    const missions = await Mission.find()
+    const { employee, type, status } = req.query;
+    console.log('Paramètres de recherche:', { employee, type, status });
+
+    // Construire la requête
+    const query = {};
+    if (employee) query.employee = employee;
+    if (type) query.type = type;
+    if (status) {
+      if (Array.isArray(status)) {
+        query.status = { $in: status };
+      } else {
+        query.status = status;
+      }
+    }
+
+    console.log('Requête MongoDB:', JSON.stringify(query, null, 2));
+
+    const missions = await Mission.find(query)
       .populate('employee')
       .populate('destinations')
       .sort({ code_mission: -1 });
     
-    // Logs détaillés pour déboguer les destinations
-    console.log('Missions from database:', JSON.stringify(missions.map(m => ({
+    // Logs détaillés pour déboguer
+    console.log('Missions trouvées:', missions.length);
+    console.log('Détails des missions:', missions.map(m => ({
       id: m._id,
       code_mission: m.code_mission,
-      destinations: m.destinations ? m.destinations.map(d => ({
-        id: d._id,
-        name: d.name,
-        type: d.type
-      })) : [],
-      employee: m.employee?.nom
-    })), null, 2));
+      employee: m.employee?.nom,
+      type: m.type,
+      status: m.status,
+      startDate: m.startDate,
+      endDate: m.endDate,
+      destinations: m.destinations?.map(d => d.name)
+    })));
     
     res.json(missions);
   } catch (error) {

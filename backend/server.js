@@ -41,6 +41,7 @@ const locationRoutes = require('./routes/locations');
 const missionRoutes = require('./routes/missions');
 const centreRoutes = require('./routes/centres');
 const fonctionRoutes = require('./routes/fonctions');
+const transportRoutes = require('./routes/transports');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/employees', employeeRoutes);
@@ -48,6 +49,7 @@ app.use('/api/locations', locationRoutes);
 app.use('/api/missions', missionRoutes);
 app.use('/api/centres', centreRoutes);
 app.use('/api/fonctions', fonctionRoutes);
+app.use('/api/transports', transportRoutes);
 
 // Route de test
 app.get('/api/health', (req, res) => {

@@ -129,6 +129,7 @@ const Missions = () => {
   const [employeesWithExistingMissions, setEmployeesWithExistingMissions] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingDestinations, setExistingDestinations] = useState([]);
+  const [existingTransports, setExistingTransports] = useState([]);
 
   // États pour les dialogues
   const [formOpen, setFormOpen] = useState(false);
@@ -403,9 +404,12 @@ const Missions = () => {
   };
 
   const getMonthStartAndEnd = (date) => {
-    const start = new Date(date.getFullYear(), date.getMonth(), 1);
-    const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-    return { start, end };
+    if (!date) {
+      throw new Error('La date est requise pour créer une mission mensuelle');
+    }
+    const startDate = new Date(date.getFullYear(), date.getMonth(), 1);
+    const endDate = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    return { startDate, endDate };
   };
 
   // Ajout de la fonction de validation des dates
@@ -478,82 +482,211 @@ const Missions = () => {
 
   // Modification de la fonction handleCreateGroupMission
   const handleCreateGroupMission = async () => {
-    if (!formValid || isSubmitting) {
+    if (!formValid) {
       setShowValidationErrors(true);
       return;
     }
 
+    if (!selectedMonth) {
+      setError('Veuillez sélectionner un mois pour la mission');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
     try {
-      setIsSubmitting(true);
-      setLoading(true);
-      setError(null);
+      console.log('Début de la création des missions groupées');
+      console.log('Employés sélectionnés:', selectedEmployees.length);
+      console.log('Destinations sélectionnées:', selectedDestinations);
+      console.log('Mode de transport:', selectedTransportMode);
 
-      // Vérifier les missions existantes pour chaque employé
-      const employeesWithExistingMissions = selectedEmployees.filter(employee => 
-        hasExistingMonthlyMission(employee._id)
-      );
-
-      if (employeesWithExistingMissions.length > 0) {
-        const employeeNames = employeesWithExistingMissions
-          .map(emp => `${emp.nom} ${emp.prenom}`)
-          .join(', ');
-        setError(`الموظفون التاليون لديهم بالفعل مهمة شهرية لهذا الشهر: ${employeeNames}`);
-        return;
+      // Vérifier si le moyen de transport existe déjà
+      let transport;
+      try {
+        // D'abord, essayer de trouver le transport existant
+        const transportResponse = await axiosInstance.get('/transports', {
+          params: {
+            nom: selectedTransportMode
+          }
+        });
+        
+        if (transportResponse.data && transportResponse.data.length > 0) {
+          transport = transportResponse.data[0];
+          console.log('Transport existant trouvé:', transport);
+        } else {
+          // Si le transport n'existe pas, le créer
+          console.log('Création d\'un nouveau transport:', selectedTransportMode);
+          const createResponse = await axiosInstance.post('/transports', {
+            nom: selectedTransportMode
+          });
+          transport = createResponse.data;
+          console.log('Nouveau transport créé:', transport);
+        }
+      } catch (error) {
+        if (error.response?.data?.code === 'DUPLICATE_KEY') {
+          // Si on a une erreur de doublon, réessayer de récupérer le transport
+          const retryResponse = await axiosInstance.get('/transports', {
+            params: {
+              nom: selectedTransportMode
+            }
+          });
+          if (retryResponse.data && retryResponse.data.length > 0) {
+            transport = retryResponse.data[0];
+            console.log('Transport récupéré après erreur de doublon:', transport);
+          } else {
+            throw new Error('Impossible de récupérer le transport après erreur de doublon');
+          }
+        } else {
+          throw error;
+        }
       }
 
-      const missionsToCreate = selectedEmployees.map((employee) => {
-        if (!employee._id || !employee.matricule) {
-          throw new Error(`Données employé incomplètes: ${employee.nom} ${employee.prenom}`);
-        }
+      if (!transport) {
+        throw new Error('Impossible de créer ou récupérer le transport');
+      }
 
-        const missionData = {
-          type: 'monthly',
-          status: 'active',
-          employee: employee._id,
-          destinations: selectedDestinations.map(dest => ({
+      // Obtenir les dates de début et de fin du mois
+      const { startDate, endDate } = getMonthStartAndEnd(selectedMonth);
+      console.log('Dates de mission:', { startDate, endDate });
+      
+      if (!startDate || !endDate) {
+        throw new Error('Impossible de déterminer les dates de début et de fin du mois');
+      }
+
+      // Préparer les données de base de la mission
+      const baseMissionData = {
+        type: 'monthly',
+        status: 'active',
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        transportMode: transport._id,
+        destinations: selectedDestinations.map(dest => {
+          // Si dest est déjà un objet avec les propriétés nécessaires, l'utiliser tel quel
+          if (typeof dest === 'object' && dest.name) {
+            return {
+              name: dest.name,
+              type: 'mission',
+              address: dest.address || dest.name,
+              city: dest.city || 'Alger',
+              country: dest.country || 'Algeria'
+            };
+          }
+          // Sinon, créer un nouvel objet avec les valeurs par défaut
+          return {
             name: dest,
             type: 'mission',
             address: dest,
             city: 'Alger',
             country: 'Algeria'
-          })),
-          startDate: missionDates.startDate.toISOString(),
-          endDate: missionDates.endDate.toISOString(),
-          transportMode: selectedTransportMode.trim(),
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        };
+          };
+        })
+      };
 
-        return missionData;
-      });
+      console.log('Données de base de la mission:', baseMissionData);
 
       // Créer les missions une par une
       const createdMissions = [];
-      for (const missionData of missionsToCreate) {
+      const failedMissions = [];
+
+      // Trouver le dernier code de mission pour cette année
+      const currentYear = new Date().getFullYear();
+      const lastMissionResponse = await axiosInstance.get('/missions', {
+        params: {
+          sort: { code_mission: -1 },
+          limit: 1
+        }
+      });
+
+      let sequenceNumber = 1;
+      if (lastMissionResponse.data.length > 0) {
+        const lastCode = lastMissionResponse.data[0].code_mission;
+        const match = lastCode.match(/^(\d{5})\/\d{4}$/);
+        if (match) {
+          sequenceNumber = parseInt(match[1], 10) + 1;
+        }
+      }
+
+      for (const employee of selectedEmployees) {
         try {
+          console.log(`Traitement de l'employé: ${employee.nom} (${employee._id})`);
+          
+          // Vérifier si l'employé a déjà une mission pour ce mois
+          const existingMission = await checkEmployeeMonthlyMission(
+            employee._id,
+            startDate,
+            endDate
+          );
+
+          if (existingMission) {
+            console.log(`L'employé ${employee.nom} a déjà une mission pour ce mois`);
+            failedMissions.push({
+              employee: employee.nom,
+              reason: 'Mission existante pour ce mois'
+            });
+            continue;
+          }
+
+          console.log(`Création de la mission pour ${employee.nom}`);
+          const missionData = {
+            ...baseMissionData,
+            employee: employee._id,
+            code_mission: `${String(sequenceNumber).padStart(5, '0')}/${currentYear}`
+          };
+          
+          console.log('Données de la mission à créer:', missionData);
           const response = await axiosInstance.post('/missions', missionData);
+          console.log(`Mission créée avec succès pour ${employee.nom}:`, response.data);
           createdMissions.push(response.data);
+          
+          // Incrémenter le numéro de séquence pour la prochaine mission
+          sequenceNumber++;
+          
+          // Ajouter un petit délai entre chaque création pour éviter les conflits
+          await new Promise(resolve => setTimeout(resolve, 100));
         } catch (error) {
-          console.error('Erreur lors de la création de la mission:', {
-            missionData,
-            error: error.response?.data || error.message
+          console.error(`Erreur lors de la création de la mission pour ${employee.nom}:`, error);
+          failedMissions.push({
+            employee: employee.nom,
+            reason: error.response?.data?.message || error.message
           });
-          throw error;
+          continue;
         }
       }
 
       if (createdMissions.length > 0) {
-        setGroupMissionDialogOpen(false);
-        resetForm(); // Réinitialiser le formulaire
-        
+        // Rafraîchir la liste des missions
         dispatch(fetchMissionsStart());
-        const missionsResponse = await axiosInstance.get('/missions');
-        dispatch(fetchMissionsSuccess(missionsResponse.data));
+        const response = await axiosInstance.get('/missions');
+        dispatch(fetchMissionsSuccess(response.data));
+
+        // Réinitialiser le formulaire
+        resetForm();
+        setGroupMissionDialogOpen(false);
+        
+        // Afficher un message de succès avec les détails
+        let message = `✅ ${createdMissions.length} mission(s) créée(s) avec succès`;
+        if (failedMissions.length > 0) {
+          message += `\n\n⚠️ ${failedMissions.length} mission(s) non créée(s):`;
+          failedMissions.forEach(fail => {
+            message += `\n- ${fail.employee}: ${fail.reason}`;
+          });
+        }
+        setError(message);
+      } else {
+        let errorMessage = '❌ Aucune mission n\'a pu être créée.';
+        if (failedMissions.length > 0) {
+          errorMessage += '\n\nRaisons:';
+          failedMissions.forEach(fail => {
+            errorMessage += `\n- ${fail.employee}: ${fail.reason}`;
+          });
+        }
+        throw new Error(errorMessage);
       }
     } catch (error) {
-      setError(error.response?.data?.message || 'Une erreur est survenue lors de la création des missions');
+      console.error('Erreur lors de la création des missions:', error);
+      setError(error.message || 'Une erreur est survenue lors de la création des missions');
     } finally {
-      setLoading(false);
       setIsSubmitting(false);
     }
   };
@@ -568,149 +701,60 @@ const Missions = () => {
     return !nonArabicAndSpacePattern.test(text);
   };
 
-  // Fonction pour gérer les événements clavier
-  const handleInputKeyDown = (event, inputState, setInputState, setSelectedState, isMultiple = false, optionsList = null) => {
-    // Gérer la touche Backspace seulement quand le champ est vide
-    if (event.key === 'Backspace' && inputState === '') {
-      if (isMultiple) {
-        // Pour les destinations multiples, supprimer la dernière destination
-        setSelectedState(prev => {
-          const newState = [...prev];
-          newState.pop();
-          return newState;
-        });
-      } else {
-        // Pour le moyen de transport
-        setSelectedState('');
-      }
-      return;
-    }
-
-    // Permettre tous les caractères de contrôle (Backspace, Delete, etc.) pour l'édition normale
-    if (event.ctrlKey || event.metaKey || event.altKey || 
-        ['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'Tab'].includes(event.key)) {
-      return; // Laisser passer les touches de contrôle
-    }
-
-    const latinPattern = /[a-zA-Z]/;
-    if (latinPattern.test(event.key)) {
-      event.preventDefault();
-      setError('يرجى استخدام الأحرف العربية فقط');
-      return;
-    }
-
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      const typedText = inputState.trim();
-
-      if (typedText !== '' && isArabicText(typedText)) {
-        if (isMultiple) {
-          setSelectedState(prev => {
-            if (!prev.includes(typedText)) {
-              return [...prev, typedText];
-            }
-            return prev;
-          });
-        } else {
-          setSelectedState(typedText);
-          if (optionsList && !optionsList.includes(typedText)) {
-            setTransportModes(prev => [...prev, typedText]);
-          }
-        }
-        setInputState('');
-        setError(null);
-      } else if (typedText !== '' && !isArabicText(typedText)) {
-        setError('يرجى استخدام الأحرف العربية فقط');
-      }
-    }
-  };
-
-  // Fonction pour gérer les changements de texte
-  const handleInputTextChange = (event, setInputState) => {
-    const typedText = event.target.value;
-    
-    // Vérifier s'il y a des caractères latins
-    const latinPattern = /[a-zA-Z]/;
-    if (latinPattern.test(typedText)) {
-      setError('يرجى استخدام الأحرف العربية فقط');
-      return; // Ne pas mettre à jour l'état si il y a des caractères latins
-    }
-    
-    // Permettre tous les autres caractères (arabe, chiffres, espaces, ponctuation)
-    setInputState(typedText);
-    setError(null);
-  };
-
-  // Fonction pour gérer le collage de texte
-  const handleInputPaste = (e, setInputState) => {
-    e.preventDefault();
-    const pastedText = e.clipboardData.getData('text');
-    
-    // Vérifier s'il y a des caractères latins
-    const latinPattern = /[a-zA-Z]/;
-    if (latinPattern.test(pastedText)) {
-      setError('يرجى استخدام الأحرف العربية فقط');
-      return;
-    }
-    
-    // Permettre le collage de texte arabe
-    setInputState(pastedText);
-    setError(null);
-  };
-
-  // Fonction pour gérer la perte de focus
-  const handleInputBlur = (inputState, setInputState, setSelectedState, isMultiple = false, optionsList = null) => {
-    const typedText = inputState.trim();
-    if (typedText !== '') {
-      // Vérifier s'il y a des caractères latins
-      const latinPattern = /[a-zA-Z]/;
-      if (latinPattern.test(typedText)) {
-        setError('يرجى استخدام الأحرف العربية فقط');
-        return;
-      }
-      
-      // Ajouter le texte valide
-      if (isMultiple) {
-        setSelectedState(prev => {
-          if (!prev.includes(typedText)) {
-            return [...prev, typedText];
-          }
-          return prev;
-        });
-      } else {
-        setSelectedState(typedText);
-        if (optionsList && !optionsList.includes(typedText)) {
-          setTransportModes(prev => [...prev, typedText]);
-        }
-      }
-      setInputState('');
-      setError(null);
-    }
-  };
-
-  // Fonction pour gérer les changements de destination
+  // Modification du gestionnaire de changement de destination
   const handleDestinationChange = (event, newValue) => {
-    const validNewValue = newValue.filter(item => item && item.trim() !== '' && isArabicText(item));
-    setSelectedDestinations(validNewValue);
-    setError(null);
+    setSelectedDestinations(newValue);
+    // Vider le champ de saisie après la sélection
+    setDestinationInput('');
   };
 
-  // Fonction pour gérer les changements de mode de transport
+  // Modification du gestionnaire de changement de texte
+  const handleInputTextChange = (e, setInput) => {
+    setInput(e.target.value);
+  };
+
+  // Modification du gestionnaire de perte de focus
+  const handleInputBlur = (input, setInput, setSelected, isDestination = false, options = []) => {
+    if (input.trim() && !selectedDestinations.includes(input.trim())) {
+      if (isDestination) {
+        setSelected(prev => [...prev, input.trim()]);
+      } else {
+        setSelected(input.trim());
+      }
+    }
+    setInput('');
+  };
+
+  // Modification du gestionnaire de touche
+  const handleInputKeyDown = (e, input, setInput, setSelected, isDestination = false, options = []) => {
+    if (e.key === 'Enter' && input.trim()) {
+      e.preventDefault();
+      if (isDestination && !selectedDestinations.includes(input.trim())) {
+        setSelected(prev => [...prev, input.trim()]);
+      } else if (!isDestination) {
+        setSelected(input.trim());
+      }
+      setInput('');
+    }
+  };
+
+  // Charger les moyens de transport existants
+  useEffect(() => {
+    const fetchTransports = async () => {
+      try {
+        const response = await axiosInstance.get('/transports');
+        setExistingTransports(response.data);
+      } catch (error) {
+        console.error('Erreur lors du chargement des moyens de transport:', error);
+      }
+    };
+    fetchTransports();
+  }, []);
+
+  // Modification du gestionnaire de changement de moyen de transport
   const handleTransportModeChange = (event, newValue) => {
-    if (newValue === null || newValue.trim() === '') {
-      setSelectedTransportMode('');
-      setError(null);
-      return;
-    }
-    if (!isArabicText(newValue)) {
-      setError('يرجى استخدام الأحرف العربية فقط في وسيلة النقل');
-      return;
-    }
-    if (!transportModes.includes(newValue)) {
-      setTransportModes(prev => [...prev, newValue]);
-    }
-    setSelectedTransportMode(newValue.trim());
-    setError(null);
+    setSelectedTransportMode(newValue);
+    setTransportModeInput('');
   };
 
   // Modification de la logique de validation
@@ -749,14 +793,22 @@ const Missions = () => {
       
       console.log(`Vérification pour employé ${employeeId} - Mois cible: ${targetMonth + 1}/${targetYear}`);
       
+      // Récupérer les missions de l'employé avec les filtres appropriés
       const response = await axiosInstance.get('/missions', {
         params: {
           employee: employeeId,
-          type: 'monthly'
+          type: 'monthly',
+          status: ['active', 'completed']
         }
       });
       
       console.log(`Missions trouvées pour l'employé:`, response.data.length);
+      console.log('Détails des missions:', response.data.map(m => ({
+        code: m.code_mission,
+        startDate: new Date(m.startDate).toLocaleDateString(),
+        endDate: new Date(m.endDate).toLocaleDateString(),
+        status: m.status
+      })));
       
       // Filtrer les missions mensuelles qui sont dans le même mois
       const conflictingMissions = response.data.filter(mission => {
@@ -767,12 +819,20 @@ const Missions = () => {
         // Vérifier si la mission est dans le même mois et année
         const isSameMonth = missionYear === targetYear && missionMonth === targetMonth;
         
-        console.log(`Mission ${mission.code_mission}: ${missionMonth + 1}/${missionYear} - Même mois: ${isSameMonth}`);
+        console.log(`Mission ${mission.code_mission}:`, {
+          date: `${missionMonth + 1}/${missionYear}`,
+          status: mission.status,
+          isSameMonth
+        });
         
         return isSameMonth;
       });
       
       console.log(`Missions en conflit trouvées:`, conflictingMissions.length);
+      
+      if (conflictingMissions.length > 0) {
+        console.log('Mission en conflit trouvée:', conflictingMissions[0]);
+      }
       
       return conflictingMissions.length > 0 ? conflictingMissions[0] : null;
     } catch (error) {
@@ -793,6 +853,13 @@ const Missions = () => {
     };
     fetchDestinations();
   }, []);
+
+  // Ajout de la fonction handleInputPaste
+  const handleInputPaste = (e, setInput) => {
+    e.preventDefault();
+    const pastedText = e.clipboardData.getData('text');
+    setInput(pastedText);
+  };
 
   const renderEmployeesList = () => {
     return (
@@ -988,6 +1055,232 @@ const Missions = () => {
         </Box>
       </>
     );
+  };
+
+  const handlePrintMonthlyMission = async (mission) => {
+    try {
+      console.log('Mission à imprimer:', mission);
+      
+      // Récupérer les détails du transport
+      let transport;
+      try {
+        const transportResponse = await axiosInstance.get(`/transports/${mission.transportMode}`);
+        transport = transportResponse.data;
+        console.log('Transport récupéré:', transport);
+      } catch (error) {
+        console.error('Erreur lors de la récupération du transport:', error);
+        // Essayer de récupérer le transport par nom si la recherche par ID échoue
+        const transportsResponse = await axiosInstance.get('/transports');
+        transport = transportsResponse.data.find(t => t._id === mission.transportMode);
+        console.log('Transport trouvé dans la liste:', transport);
+      }
+
+      if (!transport) {
+        throw new Error('Impossible de récupérer les détails du transport');
+      }
+
+      // Récupérer les détails des destinations
+      const destinations = await Promise.all(
+        mission.destinations.map(async (destId) => {
+          try {
+            const response = await axiosInstance.get(`/locations/${destId}`);
+            return response.data;
+          } catch (error) {
+            console.error('Erreur lors de la récupération de la destination:', error);
+            return null;
+          }
+        })
+      );
+
+      // Récupérer les détails de l'employé
+      const employeeResponse = await axiosInstance.get(`/employees/${mission.employee}`);
+      const employee = employeeResponse.data;
+
+      // Créer une nouvelle fenêtre pour l'impression
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        throw new Error('Impossible d\'ouvrir la fenêtre d\'impression');
+      }
+
+      // Formater les dates
+      const startDate = new Date(mission.startDate).toLocaleDateString('ar-SA');
+      const endDate = new Date(mission.endDate).toLocaleDateString('ar-SA');
+
+      // Créer le contenu HTML
+      const content = `
+        <!DOCTYPE html>
+        <html dir="rtl" lang="ar">
+        <head>
+          <meta charset="UTF-8">
+          <title>مهمة شهرية</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
+            body {
+              font-family: 'Cairo', sans-serif;
+              margin: 0;
+              padding: 20px;
+              background-color: white;
+            }
+            .container {
+              max-width: 800px;
+              margin: 0 auto;
+              padding: 20px;
+              border: 1px solid #ccc;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+            }
+            .header h1 {
+              margin: 0;
+              color: #333;
+            }
+            .info-section {
+              margin-bottom: 20px;
+            }
+            .info-section h2 {
+              color: #2c3e50;
+              border-bottom: 2px solid #3498db;
+              padding-bottom: 5px;
+              margin-bottom: 15px;
+            }
+            .info-grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 15px;
+            }
+            .info-item {
+              margin-bottom: 10px;
+            }
+            .info-item strong {
+              color: #2c3e50;
+              display: inline-block;
+              width: 150px;
+            }
+            .destinations {
+              margin-top: 20px;
+            }
+            .destination-item {
+              background-color: #f8f9fa;
+              padding: 10px;
+              margin-bottom: 10px;
+              border-radius: 5px;
+            }
+            .footer {
+              margin-top: 30px;
+              text-align: center;
+              color: #666;
+            }
+            @media print {
+              body {
+                padding: 0;
+              }
+              .container {
+                border: none;
+              }
+              .no-print {
+                display: none;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>مهمة شهرية</h1>
+            </div>
+            
+            <div class="info-section">
+              <h2>معلومات المهمة</h2>
+              <div class="info-grid">
+                <div class="info-item">
+                  <strong>رقم المهمة:</strong>
+                  <span>${mission.code}</span>
+                </div>
+                <div class="info-item">
+                  <strong>تاريخ البداية:</strong>
+                  <span>${startDate}</span>
+                </div>
+                <div class="info-item">
+                  <strong>تاريخ النهاية:</strong>
+                  <span>${endDate}</span>
+                </div>
+                <div class="info-item">
+                  <strong>وسيلة النقل:</strong>
+                  <span>${transport.nom}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="info-section">
+              <h2>معلومات الموظف</h2>
+              <div class="info-grid">
+                <div class="info-item">
+                  <strong>الاسم:</strong>
+                  <span>${employee.nom} ${employee.prenom}</span>
+                </div>
+                <div class="info-item">
+                  <strong>الرقم الوظيفي:</strong>
+                  <span>${employee.matricule}</span>
+                </div>
+                <div class="info-item">
+                  <strong>الوظيفة:</strong>
+                  <span>${employee.fonction}</span>
+                </div>
+                <div class="info-item">
+                  <strong>القسم:</strong>
+                  <span>${employee.departement}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="info-section">
+              <h2>الوجهات</h2>
+              <div class="destinations">
+                ${destinations.filter(dest => dest).map(dest => `
+                  <div class="destination-item">
+                    <div class="info-item">
+                      <strong>الاسم:</strong>
+                      <span>${dest.name}</span>
+                    </div>
+                    <div class="info-item">
+                      <strong>العنوان:</strong>
+                      <span>${dest.address}</span>
+                    </div>
+                    <div class="info-item">
+                      <strong>المدينة:</strong>
+                      <span>${dest.city}</span>
+                    </div>
+                    <div class="info-item">
+                      <strong>البلد:</strong>
+                      <span>${dest.country}</span>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+
+            <div class="footer">
+              <p>تم إنشاء هذا المستند في ${new Date().toLocaleDateString('ar-SA')}</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      // Écrire le contenu dans la fenêtre d'impression
+      printWindow.document.write(content);
+      printWindow.document.close();
+
+      // Attendre que les ressources soient chargées
+      printWindow.onload = function() {
+        printWindow.print();
+        printWindow.close();
+      };
+    } catch (error) {
+      console.error('Erreur lors de l\'impression:', error);
+      alert('Erreur lors de l\'impression de la mission');
+    }
   };
 
   return (
@@ -1371,7 +1664,7 @@ const Missions = () => {
                               </Typography>
                               <Autocomplete
                                 freeSolo
-                                options={transportModes}
+                                options={existingTransports.map(transport => transport.nom)}
                                 value={selectedTransportMode}
                                 onChange={handleTransportModeChange}
                                 renderInput={(params) => (
@@ -1382,8 +1675,8 @@ const Missions = () => {
                                     helperText={showValidationErrors && (!selectedTransportMode || selectedTransportMode.trim() === '') ? 'يرجى تحديد وسيلة النقل' : ''}
                                     value={transportModeInput}
                                     onChange={(e) => handleInputTextChange(e, setTransportModeInput)}
-                                    onKeyDown={(e) => handleInputKeyDown(e, transportModeInput, setTransportModeInput, setSelectedTransportMode, false, transportModes)}
-                                    onBlur={() => handleInputBlur(transportModeInput, setTransportModeInput, setSelectedTransportMode, false, transportModes)}
+                                    onKeyDown={(e) => handleInputKeyDown(e, transportModeInput, setTransportModeInput, setSelectedTransportMode, false)}
+                                    onBlur={() => handleInputBlur(transportModeInput, setTransportModeInput, setSelectedTransportMode, false)}
                                     sx={{
                                       '& .MuiOutlinedInput-root': {
                                         borderRadius: 2,
@@ -1458,7 +1751,7 @@ const Missions = () => {
                             {/* Messages d'erreur */}
                             {error && (
                               <Alert 
-                                severity="error" 
+                                severity={error.includes('succès') ? 'success' : 'error'} 
                                 sx={{ 
                                   borderRadius: 2,
                                 }}

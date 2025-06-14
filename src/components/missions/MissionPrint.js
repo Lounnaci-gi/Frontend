@@ -1,15 +1,11 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { Box, Typography, Grid } from '@mui/material';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import QRCode from 'qrcode.react';
+import { formatGregorianDate } from '../../utils/dateUtils';
 
-const formatGregorianDate = (date) => {
-  if (!date) return '';
-  return format(new Date(date), 'dd/MM/yyyy', { locale: ar });
-};
-
-const MissionPrint = React.forwardRef(({ mission }, ref) => {
+const MissionPrint = forwardRef(({ mission }, ref) => {
   const employee = mission.employee || {};
 
   // Préparer les données pour le QR code
@@ -28,62 +24,17 @@ const MissionPrint = React.forwardRef(({ mission }, ref) => {
   });
 
   return (
-    <Box ref={ref} sx={{
-      width: '210mm', // A4 width
-      minHeight: '297mm', // A4 height
-      padding: '20mm',
-      boxSizing: 'border-box',
-      fontFamily: 'Arial, sans-serif',
-      fontSize: '12pt',
-      direction: 'rtl', // Right-to-left for Arabic
-      textAlign: 'right',
-      '@media print': {
-        width: 'auto',
-        minHeight: 'auto',
-        margin: 0,
-        padding: 0,
-        pageBreakAfter: 'always',
-      }
-    }}>
-      {/* Header Section (Removed specific text elements) */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 4 }}>
-        {/* Removed MINISTERE DES RESSOURCES EN EAU / EP. ALGERIENNE DES EAUX */}
-        <Box sx={{ textAlign: 'center', flexGrow: 0 }}>
-          {/* Placeholder for Logo if needed later */}
-        </Box>
-        {/* Removed وزارة الموارد المائية / الجزائرية للمياه */}
+    <Box ref={ref} sx={{ p: 4, position: 'relative', minHeight: '297mm' }}>
+      {/* Header */}
+      <Box sx={{ textAlign: 'center', mb: 4 }}>
+        <Typography variant="h4" sx={{ mb: 1, fontSize: '24pt' }}>N°: {mission.code_mission || 'N/A'}</Typography>
+        <Typography variant="h5" sx={{ mb: 1, fontSize: '20pt' }}>تكليف مهمة</Typography>
+        <Typography variant="h6" sx={{ mb: 1, fontSize: '16pt' }}>منطقة الجزائر</Typography>
+        <Typography variant="h6" sx={{ mb: 1, fontSize: '16pt' }}>وحدة المدية</Typography>
       </Box>
 
-      {/* Mission Title and Number */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        {/* Left: N°: + QR Code */}
-        <Box sx={{ textAlign: 'left', flexGrow: 1, ml: 2 }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>N°: {mission.code_mission || 'N/A'}</Typography>
-          {/* QR Code */}
-          <Box sx={{ mt: 1, display: 'inline-block' }}>
-            {mission && (
-              <QRCode
-                value={qrData}
-                size={150}
-                level="H"
-                includeMargin={false}
-              />
-            )}
-          </Box>
-        </Box>
-        {/* Center: تكليف مهمة */}
-        <Typography variant="h5" sx={{ fontWeight: 'bold', textDecoration: 'underline', flexGrow: 0, textAlign: 'center' }}>
-          تكليف مهمة
-        </Typography>
-        {/* Right: منطقة الجزائر / وحدة المدية */}
-        <Box sx={{ textAlign: 'right', flexGrow: 1, mr: 2 }}>
-          <Typography variant="body2">منطقة الجزائر</Typography>
-          <Typography variant="body2">وحدة المدية</Typography>
-        </Box>
-      </Box>
-
-      {/* Employee Details */}
-      <Box sx={{ mt: 8 }}>
+      {/* Employee Info */}
+      <Box sx={{ mt: 4 }}>
         <Grid container alignItems="center" sx={{ mb: 1, direction: 'ltr' }}>
           <Grid item xs={4} sx={{ textAlign: 'left' }}>
             <Typography variant="body1" sx={{ fontSize: '14pt' }}>الاسم:</Typography>
@@ -116,6 +67,10 @@ const MissionPrint = React.forwardRef(({ mission }, ref) => {
             <Typography variant="body1" sx={{ fontSize: '14pt' }}>{employee.poste || 'N/A'}</Typography>
           </Grid>
         </Grid>
+      </Box>
+
+      {/* Mission Type */}
+      <Box sx={{ mt: 4 }}>
         <Grid container alignItems="center" sx={{ mb: 1, direction: 'ltr' }}>
           <Grid item xs={4} sx={{ textAlign: 'left' }}>
             <Typography variant="body1" sx={{ fontSize: '14pt' }}>سبب التنقل:</Typography>
@@ -153,7 +108,7 @@ const MissionPrint = React.forwardRef(({ mission }, ref) => {
             <Typography variant="body1" sx={{ fontSize: '14pt' }}>وسيلة النقل:</Typography>
           </Grid>
           <Grid item xs={8} sx={{ textAlign: 'center' }}>
-            <Typography variant="body1" sx={{ fontSize: '14pt' }}>{mission.transportMode || 'سيارة المصلحة'}</Typography>
+            <Typography variant="body1" sx={{ fontSize: '14pt' }}>{mission.transport?.nom || mission.transportMode}</Typography>
           </Grid>
         </Grid>
         <Grid container alignItems="center" sx={{ mb: 1, direction: 'ltr' }}>
@@ -161,7 +116,11 @@ const MissionPrint = React.forwardRef(({ mission }, ref) => {
             <Typography variant="body1" sx={{ fontSize: '14pt' }}>يسافر الى:</Typography>
           </Grid>
           <Grid item xs={8} sx={{ textAlign: 'center' }}>
-            <Typography variant="body1" sx={{ fontSize: '14pt' }}>{mission.destinations && mission.destinations.length > 0 ? mission.destinations.map(d => d.name || d).join(', ') : 'N/A'}</Typography>
+            <Typography variant="body1" sx={{ fontSize: '14pt' }}>
+              {mission.destinations && mission.destinations.length > 0 
+                ? mission.destinations.map(d => d.name || d).join(', ') 
+                : 'N/A'}
+            </Typography>
           </Grid>
         </Grid>
       </Box>
