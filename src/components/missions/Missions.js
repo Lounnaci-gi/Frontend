@@ -366,18 +366,18 @@ const Missions = () => {
     
     // Vérifier si l'employé est déjà sélectionné
     const isAlreadySelected = selectedEmployees.some(emp => emp._id === employee._id);
-    console.log(`🔍 Employé déjà sélectionné: ${isAlreadySelected}`);
+    
     
     if (isAlreadySelected) {
       setSelectedEmployees(prev => prev.filter(emp => emp._id !== employee._id));
-      console.log('✅ Employé désélectionné:', employee.nom, employee.prenom);
+      
     } else {
       setSelectedEmployees(prev => [...prev, employee]);
       setError(null);
-      console.log('✅ Employé sélectionné:', employee.nom, employee.prenom);
+      
     }
     
-    console.log(`📋 Nombre total d'employés sélectionnés: ${selectedEmployees.length + (isAlreadySelected ? -1 : 1)}`);
+    
   };
 
   const handleSelectAll = () => {
@@ -496,12 +496,7 @@ const Missions = () => {
     setError(null);
 
     try {
-      console.log('Début de la création des missions groupées');
-      console.log('Employés sélectionnés:', selectedEmployees.length);
-      console.log('Destinations sélectionnées:', selectedDestinations);
-      console.log('Mode de transport:', selectedTransportMode);
-
-      // Vérifier si le moyen de transport existe déjà
+           // Vérifier si le moyen de transport existe déjà
       let transport;
       try {
         // D'abord, essayer de trouver le transport existant
@@ -513,15 +508,15 @@ const Missions = () => {
         
         if (transportResponse.data && transportResponse.data.length > 0) {
           transport = transportResponse.data[0];
-          console.log('Transport existant trouvé:', transport);
+          
         } else {
           // Si le transport n'existe pas, le créer
-          console.log('Création d\'un nouveau transport:', selectedTransportMode);
+          
           const createResponse = await axiosInstance.post('/transports', {
             nom: selectedTransportMode
           });
           transport = createResponse.data;
-          console.log('Nouveau transport créé:', transport);
+         
         }
       } catch (error) {
         if (error.response?.data?.code === 'DUPLICATE_KEY') {
@@ -548,7 +543,7 @@ const Missions = () => {
 
       // Obtenir les dates de début et de fin du mois
       const { startDate, endDate } = getMonthStartAndEnd(selectedMonth);
-      console.log('Dates de mission:', { startDate, endDate });
+      
       
       if (!startDate || !endDate) {
         throw new Error('Impossible de déterminer les dates de début et de fin du mois');
@@ -583,7 +578,7 @@ const Missions = () => {
         })
       };
 
-      console.log('Données de base de la mission:', baseMissionData);
+      
 
       // Créer les missions une par une
       const createdMissions = [];
@@ -1061,21 +1056,32 @@ const Missions = () => {
     try {
       console.log('Mission à imprimer:', mission);
       
-      // Récupérer les détails du transport
-      let transport;
-      try {
-        const transportResponse = await axiosInstance.get(`/transports/${mission.transportMode}`);
-        transport = transportResponse.data;
-        console.log('Transport récupéré:', transport);
-      } catch (error) {
-        console.error('Erreur lors de la récupération du transport:', error);
-        // Essayer de récupérer le transport par nom si la recherche par ID échoue
-        const transportsResponse = await axiosInstance.get('/transports');
-        transport = transportsResponse.data.find(t => t._id === mission.transportMode);
-        console.log('Transport trouvé dans la liste:', transport);
+      // Vérifier si le transport est déjà peuplé
+      let transport = mission.transportMode;
+      
+      // Si le transport n'est pas peuplé (ancien format), le récupérer
+      if (!transport || typeof transport === 'string') {
+        try {
+          // Essayer d'abord de récupérer le transport par ID
+          const transportResponse = await axiosInstance.get(`/transports/${mission.transportMode}`);
+          transport = transportResponse.data;
+          console.log('Transport récupéré par ID:', transport);
+        } catch (error) {
+          console.error('Erreur lors de la récupération du transport par ID:', error);
+          // Si la recherche par ID échoue, récupérer tous les transports et chercher par ID
+          try {
+            const transportsResponse = await axiosInstance.get('/transports');
+            transport = transportsResponse.data.find(t => t._id === mission.transportMode);
+            console.log('Transport trouvé dans la liste:', transport);
+          } catch (fallbackError) {
+            console.error('Erreur lors de la récupération de tous les transports:', fallbackError);
+            throw new Error('Impossible de récupérer les détails du transport');
+          }
+        }
       }
 
       if (!transport) {
+        console.error('Transport non trouvé pour l\'ID:', mission.transportMode);
         throw new Error('Impossible de récupérer les détails du transport');
       }
 
@@ -1195,7 +1201,7 @@ const Missions = () => {
               <div class="info-grid">
                 <div class="info-item">
                   <strong>رقم المهمة:</strong>
-                  <span>${mission.code}</span>
+                  <span>${mission.code_mission || mission.code}</span>
                 </div>
                 <div class="info-item">
                   <strong>تاريخ البداية:</strong>
@@ -1261,25 +1267,26 @@ const Missions = () => {
             </div>
 
             <div class="footer">
-              <p>تم إنشاء هذا المستند في ${new Date().toLocaleDateString('ar-SA')}</p>
+              <p>تم إنشاء هذه الوثيقة في ${new Date().toLocaleDateString('ar-SA')}</p>
             </div>
           </div>
         </body>
         </html>
       `;
 
-      // Écrire le contenu dans la fenêtre d'impression
+      // Écrire le contenu dans la fenêtre et imprimer
       printWindow.document.write(content);
       printWindow.document.close();
-
-      // Attendre que les ressources soient chargées
-      printWindow.onload = function() {
+      
+      // Attendre que le contenu soit chargé avant d'imprimer
+      printWindow.onload = () => {
         printWindow.print();
         printWindow.close();
       };
+
     } catch (error) {
       console.error('Erreur lors de l\'impression:', error);
-      alert('Erreur lors de l\'impression de la mission');
+      alert(`Erreur lors de l'impression: ${error.message}`);
     }
   };
 

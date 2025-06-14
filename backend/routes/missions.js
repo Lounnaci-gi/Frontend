@@ -200,6 +200,7 @@ router.get('/', auth, async (req, res) => {
     const missions = await Mission.find(query)
       .populate('employee')
       .populate('destinations')
+      .populate('transportMode')
       .sort({ code_mission: -1 });
     
     // Logs détaillés pour déboguer
@@ -226,7 +227,8 @@ router.get('/:id', auth, async (req, res) => {
   try {
     const mission = await Mission.findById(req.params.id)
       .populate('employee')
-      .populate('destinations');
+      .populate('destinations')
+      .populate('transportMode');
     if (!mission) {
       return res.status(404).json({ message: 'Mission non trouvée' });
     }
@@ -242,7 +244,7 @@ router.put('/:id', auth, async (req, res) => {
       req.params.id,
       { ...req.body, updatedAt: new Date() },
       { new: true }
-    ).populate(['employee', 'destinations']);
+    ).populate('employee').populate('destinations').populate('transportMode');
     
     if (!mission) {
       return res.status(404).json({ message: 'Mission non trouvée' });

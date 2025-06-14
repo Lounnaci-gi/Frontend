@@ -1,141 +1,289 @@
 import React, { forwardRef } from 'react';
-import { Box, Typography, Grid } from '@mui/material';
-import { format } from 'date-fns';
-import { ar } from 'date-fns/locale';
+import { Box, Typography } from '@mui/material';
 import QRCode from 'qrcode.react';
-import { formatGregorianDate } from '../../utils/dateUtils';
 
 const MissionPrint = forwardRef(({ mission }, ref) => {
   const employee = mission.employee || {};
-
-  // Préparer les données pour le QR code
+  
+  // Données pour le QR code
   const qrData = JSON.stringify({
-    code_mission: mission.code_mission || 'N/A',
-    employee: {
-      nom: employee.nom || 'N/A',
-      prenom: employee.prenom || 'N/A',
-      matricule: employee.matricule || 'N/A',
-      poste: employee.poste || 'N/A',
-      centre: employee.centre || 'N/A',
-    },
-    type: mission.type || 'N/A',
-    destinations: mission.destinations && mission.destinations.length > 0 ? mission.destinations.map(d => d.name || d).join(', ') : 'N/A',
-    transportMode: mission.transportMode || 'سيارة المصلحة',
+    nom: employee.nom || 'N/A',
+    prenom: employee.prenom || 'N/A',
+    fonction: employee.fonction || employee.poste || 'N/A',
+    centre: employee.centre || 'N/A'
   });
 
   return (
-    <Box ref={ref} sx={{ p: 4, position: 'relative', minHeight: '297mm' }}>
-      {/* Header */}
-      <Box sx={{ textAlign: 'center', mb: 4 }}>
-        <Typography variant="h4" sx={{ mb: 1, fontSize: '24pt' }}>N°: {mission.code_mission || 'N/A'}</Typography>
-        <Typography variant="h5" sx={{ mb: 1, fontSize: '20pt' }}>تكليف مهمة</Typography>
-        <Typography variant="h6" sx={{ mb: 1, fontSize: '16pt' }}>منطقة الجزائر</Typography>
-        <Typography variant="h6" sx={{ mb: 1, fontSize: '16pt' }}>وحدة المدية</Typography>
+    <Box ref={ref} sx={{ 
+      p: 4, 
+      position: 'relative', 
+      minHeight: '297mm',
+      width: '210mm',
+      margin: '0 auto',
+      backgroundColor: 'white',
+      fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
+      direction: 'rtl',
+      '@import': 'url("https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;700&display=swap")'
+    }}>
+      <Typography variant="h4" sx={{ 
+        textAlign: 'center',
+        position: 'absolute',
+        top: '5cm',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        fontSize: '3.5em',
+        fontWeight: 'bold',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        textDecoration: 'underline',
+        width: '4.35cm'
+      }}>
+        تكليف بمهمة
+      </Typography>
+      <Typography variant="h5" sx={{ 
+        position: 'absolute',
+        top: '5cm',
+        left: '1cm',
+        fontSize: '2.3em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+      }}>
+        منطقة الجزائر
+      </Typography>
+      <Typography variant="h5" sx={{ 
+        position: 'absolute',
+        top: '5cm',
+        right: '1cm',
+        fontSize: '2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+      }}>
+        {mission.code_mission || 'N/A'}
+      </Typography>
+      <Box sx={{
+        position: 'absolute',
+        top: '5.8cm',
+        right: '1cm',
+        width: '2cm',
+        height: '2cm'
+      }}>
+        <QRCode 
+          value={qrData} 
+          size={76} // 2cm = 76px environ
+          level="M"
+          includeMargin={true}
+        />
       </Box>
+      <Typography variant="h5" sx={{ 
+        position: 'absolute',
+        top: '5.8cm',
+        left: '1cm',
+        fontSize: '2.3em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+      }}>
+        ولاية المدية
+      </Typography>
 
-      {/* Employee Info */}
-      <Box sx={{ mt: 4 }}>
-        <Grid container alignItems="center" sx={{ mb: 1, direction: 'ltr' }}>
-          <Grid item xs={4} sx={{ textAlign: 'left' }}>
-            <Typography variant="body1" sx={{ fontSize: '14pt' }}>الاسم:</Typography>
-          </Grid>
-          <Grid item xs={8} sx={{ textAlign: 'center' }}>
-            <Typography variant="body1" sx={{ fontSize: '14pt' }}>{employee.prenom || 'N/A'}</Typography>
-          </Grid>
-        </Grid>
-        <Grid container alignItems="center" sx={{ mb: 1, direction: 'ltr' }}>
-          <Grid item xs={4} sx={{ textAlign: 'left' }}>
-            <Typography variant="body1" sx={{ fontSize: '14pt' }}>اللقب:</Typography>
-          </Grid>
-          <Grid item xs={8} sx={{ textAlign: 'center' }}>
-            <Typography variant="body1" sx={{ fontSize: '14pt' }}>{employee.nom || 'N/A'}</Typography>
-          </Grid>
-        </Grid>
-        <Grid container alignItems="center" sx={{ mb: 1, direction: 'ltr' }}>
-          <Grid item xs={4} sx={{ textAlign: 'left' }}>
-            <Typography variant="body1" sx={{ fontSize: '14pt' }}>التعيين:</Typography>
-          </Grid>
-          <Grid item xs={8} sx={{ textAlign: 'center' }}>
-            <Typography variant="body1" sx={{ fontSize: '14pt' }}>{employee.centre || 'N/A'}</Typography>
-          </Grid>
-        </Grid>
-        <Grid container alignItems="center" sx={{ mb: 1, direction: 'ltr' }}>
-          <Grid item xs={4} sx={{ textAlign: 'left' }}>
-            <Typography variant="body1" sx={{ fontSize: '14pt' }}>المهنة:</Typography>
-          </Grid>
-          <Grid item xs={8} sx={{ textAlign: 'center' }}>
-            <Typography variant="body1" sx={{ fontSize: '14pt' }}>{employee.poste || 'N/A'}</Typography>
-          </Grid>
-        </Grid>
-      </Box>
+      {/* Désignations à gauche */}
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '8cm',
+        left: '1cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+      }}>
+        اللقب
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '10cm',
+        left: '1cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+      }}>
+        الاسم
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '12cm',
+        left: '1cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+      }}>
+        التعيين
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '14cm',
+        left: '1cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+      }}>
+        المهنة
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '16cm',
+        left: '1cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+      }}>
+        سبب التنقل
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '18cm',
+        left: '1cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+      }}>
+        تاريخ الانطلاق
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '20cm',
+        left: '1cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+      }}>
+        تاريخ الرجوع
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '22cm',
+        left: '1cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+      }}>
+        وسيلة النقل
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '24cm',
+        left: '1cm',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+      }}>
+        يسافر الى
+      </Typography>
 
-      {/* Mission Type */}
-      <Box sx={{ mt: 4 }}>
-        <Grid container alignItems="center" sx={{ mb: 1, direction: 'ltr' }}>
-          <Grid item xs={4} sx={{ textAlign: 'left' }}>
-            <Typography variant="body1" sx={{ fontSize: '14pt' }}>سبب التنقل:</Typography>
-          </Grid>
-          <Grid item xs={8} sx={{ textAlign: 'center' }}>
-            <Typography variant="body1" sx={{ fontSize: '14pt' }}>مهمة</Typography>
-          </Grid>
-        </Grid>
-      </Box>
+      {/* Champs correspondants au milieu */}
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '8cm',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        minWidth: '8cm',
+        textAlign: 'center'
+      }}>
+        {employee.nom || '________________'}
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '10cm',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        minWidth: '8cm',
+        textAlign: 'center'
+      }}>
+        {employee.prenom || '________________'}
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '12cm',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        minWidth: '8cm',
+        textAlign: 'center'
+      }}>
+        {employee.centre || '________________'}
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '14cm',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        minWidth: '8cm',
+        textAlign: 'center'
+      }}>
+        {employee.poste || employee.fonction || '________________'}
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '16cm',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        minWidth: '8cm',
+        textAlign: 'center'
+      }}>
+        مهمة
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '18cm',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        minWidth: '8cm',
+        textAlign: 'center'
+      }}>
+        {mission.date_depart ? new Date(mission.date_depart).toLocaleDateString('ar-SA') : '________________'}
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '20cm',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        minWidth: '8cm',
+        textAlign: 'center'
+      }}>
+        {mission.date_retour ? new Date(mission.date_retour).toLocaleDateString('ar-SA') : '________________'}
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '22cm',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        minWidth: '8cm',
+        textAlign: 'center'
+      }}>
+        {mission.transportMode?.nom || '________________'}
+      </Typography>
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        top: '24cm',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        fontSize: '2.2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        minWidth: '8cm',
+        textAlign: 'center'
+      }}>
+        {mission.destination || '________________'}
+      </Typography>
 
-      {/* Mission Dates */}
-      <Box sx={{ mt: 4 }}>
-        <Grid container alignItems="center" sx={{ mb: 1, direction: 'ltr' }}>
-          <Grid item xs={4} sx={{ textAlign: 'left' }}>
-            <Typography variant="body1" sx={{ fontSize: '14pt' }}>تاريخ الانطلاق:</Typography>
-          </Grid>
-          <Grid item xs={8} sx={{ textAlign: 'center' }}>
-            <Typography variant="body1" sx={{ fontSize: '14pt' }}>{formatGregorianDate(mission.startDate)}</Typography>
-          </Grid>
-        </Grid>
-        <Grid container alignItems="center" sx={{ mb: 1, direction: 'ltr' }}>
-          <Grid item xs={4} sx={{ textAlign: 'left' }}>
-            <Typography variant="body1" sx={{ fontSize: '14pt' }}>تاريخ الرجوع:</Typography>
-          </Grid>
-          <Grid item xs={8} sx={{ textAlign: 'center' }}>
-            <Typography variant="body1" sx={{ fontSize: '14pt' }}>{formatGregorianDate(mission.endDate)}</Typography>
-          </Grid>
-        </Grid>
-      </Box>
-
-      {/* Transport and Destination */}
-      <Box sx={{ mt: 4 }}>
-        <Grid container alignItems="center" sx={{ mb: 1, direction: 'ltr' }}>
-          <Grid item xs={4} sx={{ textAlign: 'left' }}>
-            <Typography variant="body1" sx={{ fontSize: '14pt' }}>وسيلة النقل:</Typography>
-          </Grid>
-          <Grid item xs={8} sx={{ textAlign: 'center' }}>
-            <Typography variant="body1" sx={{ fontSize: '14pt' }}>{mission.transport?.nom || mission.transportMode}</Typography>
-          </Grid>
-        </Grid>
-        <Grid container alignItems="center" sx={{ mb: 1, direction: 'ltr' }}>
-          <Grid item xs={4} sx={{ textAlign: 'left' }}>
-            <Typography variant="body1" sx={{ fontSize: '14pt' }}>يسافر الى:</Typography>
-          </Grid>
-          <Grid item xs={8} sx={{ textAlign: 'center' }}>
-            <Typography variant="body1" sx={{ fontSize: '14pt' }}>
-              {mission.destinations && mission.destinations.length > 0 
-                ? mission.destinations.map(d => d.name || d).join(', ') 
-                : 'N/A'}
-            </Typography>
-          </Grid>
-        </Grid>
-      </Box>
-
-      {/* Footer / Signature Area (Removed) */}
-
-      {/* Address at the very bottom */}
-      <Box sx={{ position: 'absolute', bottom: '10mm', left: '20mm', right: '20mm', textAlign: 'center', fontSize: '8pt', borderTop: '1px solid black', pt: 0.5 }}>
-        <Typography variant="caption">
-          المقر الإجتماعي: حي قريطن، المدية - Médéa - Tél: (025) 74 13 35/32 Fax: (025) 74 13 43
-        </Typography>
-        <Typography variant="caption" display="block">
-          على السلطات المدنية و العسكرية أن تسمح بكل حرية و في جميع الظروف لحاملي هذا الأمر بالمهمة و تسهيل له و تساعده لتأدية مهامه
-        </Typography>
-      </Box>
+      {/* Date en bas à droite */}
+      <Typography variant="body1" sx={{ 
+        position: 'absolute',
+        bottom: '2cm',
+        right: '2cm',
+        fontSize: '2em',
+        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+      }}>
+        المدية : {new Date().toLocaleDateString('fr-FR')}
+      </Typography>
     </Box>
   );
 });
