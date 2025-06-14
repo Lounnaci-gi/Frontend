@@ -123,16 +123,6 @@ missionSchema.pre('validate', async function(next) {
     // Si code_mission n'est pas fourni, le générer
     if (!this.code_mission) {
       this.code_mission = await generateMissionCode();
-    } else {
-      // Vérifier si le code_mission fourni existe déjà
-      const existingMission = await mongoose.model('Mission').findOne({ 
-        code_mission: this.code_mission,
-        _id: { $ne: this._id } // Exclure la mission actuelle si c'est une mise à jour
-      });
-      
-      if (existingMission) {
-        throw new Error(`Le code de mission ${this.code_mission} existe déjà`);
-      }
     }
     
     // Générer l'ancien format de code pour la compatibilité
@@ -142,6 +132,7 @@ missionSchema.pre('validate', async function(next) {
     
     next();
   } catch (error) {
+    console.error('Erreur dans le middleware pre-validate:', error);
     next(error);
   }
 });

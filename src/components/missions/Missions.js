@@ -130,6 +130,8 @@ const Missions = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingDestinations, setExistingDestinations] = useState([]);
   const [existingTransports, setExistingTransports] = useState([]);
+  const [progressMessage, setProgressMessage] = useState('');
+  const [progressPercentage, setProgressPercentage] = useState(0);
 
   // États pour les dialogues
   const [formOpen, setFormOpen] = useState(false);
@@ -222,18 +224,12 @@ const Missions = () => {
 
   // Effet pour forcer la mise à jour de l'interface quand les missions existantes changent
   useEffect(() => {
-    console.log('🔄 Mise à jour de l\'interface - Employés avec missions existantes:', employeesWithExistingMissions.length);
-    console.log('📋 Liste des employés avec missions:', employeesWithExistingMissions.map(emp => `${emp.nom} ${emp.prenom}`));
+    // Mise à jour silencieuse de l'interface
   }, [employeesWithExistingMissions]);
 
   const getEmployeeStatus = (employee) => {
     const hasExistingMission = employeesWithExistingMissions.some(emp => emp._id === employee._id);
     const isSelected = selectedEmployees.some(emp => emp._id === employee._id);
-    
-    // Log de débogage pour les employés avec missions existantes
-    if (hasExistingMission) {
-      console.log(`🔍 ${employee.nom} ${employee.prenom} a une mission existante - selectable: false`);
-    }
     
     if (hasExistingMission) {
       return {
@@ -350,17 +346,13 @@ const Missions = () => {
   };
 
   const handleEmployeeSelect = (employee) => {
-    console.log(`\n🎯 Tentative de sélection de ${employee.nom} ${employee.prenom} (${employee.matricule})`);
-    
     const employeeStatus = getEmployeeStatus(employee);
-    console.log(`📊 Statut de l'employé:`, employeeStatus);
     
     // Si l'employé n'est pas sélectionnable, ne rien faire
     if (!employeeStatus.selectable) {
       const monthName = missionDates.startDate?.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) || 'ce mois';
       const errorMsg = `${employee.nom} ${employee.prenom} a déjà une mission mensuelle pour ${monthName}`;
       setError(errorMsg);
-      console.log('❌ Employé non sélectionnable - mission existante:', errorMsg);
       return;
     }
     
@@ -478,6 +470,8 @@ const Missions = () => {
     setError(null);
     setFormValid(false);
     setShowValidationErrors(false);
+    setProgressMessage('');
+    setProgressPercentage(0);
   };
 
   // Modification de la fonction handleCreateGroupMission
@@ -494,9 +488,13 @@ const Missions = () => {
 
     setIsSubmitting(true);
     setError(null);
+    setProgressMessage('جاري التحضير...');
+    setProgressPercentage(0);
 
     try {
-           // Vérifier si le moyen de transport existe déjà
+      setProgressMessage('جاري التحقق من وسيلة النقل...');
+      setProgressPercentage(5);
+      // Vérifier si le moyen de transport existe déjà
       let transport;
       try {
         // D'abord, essayer de trouver le transport existant
@@ -508,15 +506,12 @@ const Missions = () => {
         
         if (transportResponse.data && transportResponse.data.length > 0) {
           transport = transportResponse.data[0];
-          
         } else {
           // Si le transport n'existe pas, le créer
-          
           const createResponse = await axiosInstance.post('/transports', {
             nom: selectedTransportMode
           });
           transport = createResponse.data;
-         
         }
       } catch (error) {
         if (error.response?.data?.code === 'DUPLICATE_KEY') {
@@ -528,7 +523,6 @@ const Missions = () => {
           });
           if (retryResponse.data && retryResponse.data.length > 0) {
             transport = retryResponse.data[0];
-            console.log('Transport récupéré après erreur de doublon:', transport);
           } else {
             throw new Error('Impossible de récupérer le transport après erreur de doublon');
           }
@@ -544,143 +538,91 @@ const Missions = () => {
       // Obtenir les dates de début et de fin du mois
       const { startDate, endDate } = getMonthStartAndEnd(selectedMonth);
       
-      
       if (!startDate || !endDate) {
         throw new Error('Impossible de déterminer les dates de début et de fin du mois');
       }
 
-      // Préparer les données de base de la mission
-      const baseMissionData = {
-        type: 'monthly',
-        status: 'active',
+      setProgressMessage(`جاري إنشاء ${selectedEmployees.length} مهمة...`);
+      setProgressPercentage(15);
+
+      // Déboguer les destinations
+      console.log('Destinations sélectionnées:', selectedDestinations);
+
+      // Préparer les données pour la création groupée
+      const groupMissionData = {
+        employees: selectedEmployees.map(emp => emp._id),
         startDate: startDate.toISOString(),
         endDate: endDate.toISOString(),
+        destinations: selectedDestinations.map(destName => ({
+          name: destName,
+          type: 'mission',
+          address: destName,
+          city: 'Alger',
+          country: 'Algeria'
+        })),
         transportMode: transport._id,
-        destinations: selectedDestinations.map(dest => {
-          // Si dest est déjà un objet avec les propriétés nécessaires, l'utiliser tel quel
-          if (typeof dest === 'object' && dest.name) {
-            return {
-              name: dest.name,
-              type: 'mission',
-              address: dest.address || dest.name,
-              city: dest.city || 'Alger',
-              country: dest.country || 'Algeria'
-            };
-          }
-          // Sinon, créer un nouvel objet avec les valeurs par défaut
-          return {
-            name: dest,
-            type: 'mission',
-            address: dest,
-            city: 'Alger',
-            country: 'Algeria'
-          };
-        })
+        type: 'monthly'
       };
 
-      
+      console.log('Données à envoyer:', JSON.stringify(groupMissionData, null, 2));
 
-      // Créer les missions une par une
-      const createdMissions = [];
-      const failedMissions = [];
+      // Démarrer la simulation de progression
+      const progressInterval = simulateProgress(15, 85, 8000); // 8 secondes pour la création
 
-      // Trouver le dernier code de mission pour cette année
-      const currentYear = new Date().getFullYear();
-      const lastMissionResponse = await axiosInstance.get('/missions', {
-        params: {
-          sort: { code_mission: -1 },
-          limit: 1
-        }
+      // Utiliser la route backend pour la création groupée
+      const response = await axiosInstance.post('/missions/group', groupMissionData, {
+        timeout: 120000 // 2 minutes de timeout
       });
-
-      let sequenceNumber = 1;
-      if (lastMissionResponse.data.length > 0) {
-        const lastCode = lastMissionResponse.data[0].code_mission;
-        const match = lastCode.match(/^(\d{5})\/\d{4}$/);
-        if (match) {
-          sequenceNumber = parseInt(match[1], 10) + 1;
-        }
-      }
-
-      for (const employee of selectedEmployees) {
-        try {
-          console.log(`Traitement de l'employé: ${employee.nom} (${employee._id})`);
-          
-          // Vérifier si l'employé a déjà une mission pour ce mois
-          const existingMission = await checkEmployeeMonthlyMission(
-            employee._id,
-            startDate,
-            endDate
-          );
-
-          if (existingMission) {
-            console.log(`L'employé ${employee.nom} a déjà une mission pour ce mois`);
-            failedMissions.push({
-              employee: employee.nom,
-              reason: 'Mission existante pour ce mois'
-            });
-            continue;
-          }
-
-          console.log(`Création de la mission pour ${employee.nom}`);
-          const missionData = {
-            ...baseMissionData,
-            employee: employee._id,
-            code_mission: `${String(sequenceNumber).padStart(5, '0')}/${currentYear}`
-          };
-          
-          console.log('Données de la mission à créer:', missionData);
-          const response = await axiosInstance.post('/missions', missionData);
-          console.log(`Mission créée avec succès pour ${employee.nom}:`, response.data);
-          createdMissions.push(response.data);
-          
-          // Incrémenter le numéro de séquence pour la prochaine mission
-          sequenceNumber++;
-          
-          // Ajouter un petit délai entre chaque création pour éviter les conflits
-          await new Promise(resolve => setTimeout(resolve, 100));
-        } catch (error) {
-          console.error(`Erreur lors de la création de la mission pour ${employee.nom}:`, error);
-          failedMissions.push({
-            employee: employee.nom,
-            reason: error.response?.data?.message || error.message
-          });
-          continue;
-        }
-      }
-
-      if (createdMissions.length > 0) {
+      
+      // Arrêter la simulation et passer à la fin
+      clearInterval(progressInterval);
+      setProgressMessage('جاري تحديث القائمة...');
+      setProgressPercentage(90);
+      
+      if (response.data && response.data.missions) {
         // Rafraîchir la liste des missions
         dispatch(fetchMissionsStart());
-        const response = await axiosInstance.get('/missions');
-        dispatch(fetchMissionsSuccess(response.data));
+        const missionsResponse = await axiosInstance.get('/missions');
+        dispatch(fetchMissionsSuccess(missionsResponse.data));
 
         // Réinitialiser le formulaire
         resetForm();
         setGroupMissionDialogOpen(false);
+        setProgressMessage('');
+        setProgressPercentage(100);
         
         // Afficher un message de succès avec les détails
-        let message = `✅ ${createdMissions.length} mission(s) créée(s) avec succès`;
-        if (failedMissions.length > 0) {
-          message += `\n\n⚠️ ${failedMissions.length} mission(s) non créée(s):`;
-          failedMissions.forEach(fail => {
+        let message = `✅ ${response.data.missions.length} mission(s) créée(s) avec succès`;
+        if (response.data.failed && response.data.failed.length > 0) {
+          message += `\n\n⚠️ ${response.data.failed.length} mission(s) non créée(s):`;
+          response.data.failed.forEach(fail => {
             message += `\n- ${fail.employee}: ${fail.reason}`;
           });
         }
         setError(message);
       } else {
-        let errorMessage = '❌ Aucune mission n\'a pu être créée.';
-        if (failedMissions.length > 0) {
-          errorMessage += '\n\nRaisons:';
-          failedMissions.forEach(fail => {
-            errorMessage += `\n- ${fail.employee}: ${fail.reason}`;
-          });
-        }
-        throw new Error(errorMessage);
+        throw new Error('Réponse invalide du serveur');
       }
     } catch (error) {
       console.error('Erreur lors de la création des missions:', error);
-      setError(error.message || 'Une erreur est survenue lors de la création des missions');
+      console.error('Détails de l\'erreur:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        statusText: error.response?.statusText
+      });
+      
+      let errorMessage = 'Une erreur est survenue lors de la création des missions';
+      
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
+      setProgressMessage('');
+      setProgressPercentage(0);
     } finally {
       setIsSubmitting(false);
     }
@@ -698,7 +640,18 @@ const Missions = () => {
 
   // Modification du gestionnaire de changement de destination
   const handleDestinationChange = (event, newValue) => {
-    setSelectedDestinations(newValue);
+    // S'assurer que newValue ne contient que des chaînes
+    const stringValues = newValue.map(value => {
+      if (typeof value === 'string') {
+        return value;
+      } else if (value && typeof value === 'object' && value.name) {
+        return value.name;
+      } else {
+        return String(value);
+      }
+    });
+    
+    setSelectedDestinations(stringValues);
     // Vider le champ de saisie après la sélection
     setDestinationInput('');
   };
@@ -786,8 +739,6 @@ const Missions = () => {
       const targetYear = startDate.getFullYear();
       const targetMonth = startDate.getMonth();
       
-      console.log(`Vérification pour employé ${employeeId} - Mois cible: ${targetMonth + 1}/${targetYear}`);
-      
       // Récupérer les missions de l'employé avec les filtres appropriés
       const response = await axiosInstance.get('/missions', {
         params: {
@@ -796,14 +747,6 @@ const Missions = () => {
           status: ['active', 'completed']
         }
       });
-      
-      console.log(`Missions trouvées pour l'employé:`, response.data.length);
-      console.log('Détails des missions:', response.data.map(m => ({
-        code: m.code_mission,
-        startDate: new Date(m.startDate).toLocaleDateString(),
-        endDate: new Date(m.endDate).toLocaleDateString(),
-        status: m.status
-      })));
       
       // Filtrer les missions mensuelles qui sont dans le même mois
       const conflictingMissions = response.data.filter(mission => {
@@ -814,20 +757,8 @@ const Missions = () => {
         // Vérifier si la mission est dans le même mois et année
         const isSameMonth = missionYear === targetYear && missionMonth === targetMonth;
         
-        console.log(`Mission ${mission.code_mission}:`, {
-          date: `${missionMonth + 1}/${missionYear}`,
-          status: mission.status,
-          isSameMonth
-        });
-        
         return isSameMonth;
       });
-      
-      console.log(`Missions en conflit trouvées:`, conflictingMissions.length);
-      
-      if (conflictingMissions.length > 0) {
-        console.log('Mission en conflit trouvée:', conflictingMissions[0]);
-      }
       
       return conflictingMissions.length > 0 ? conflictingMissions[0] : null;
     } catch (error) {
@@ -854,6 +785,22 @@ const Missions = () => {
     e.preventDefault();
     const pastedText = e.clipboardData.getData('text');
     setInput(pastedText);
+  };
+
+  // Fonction pour simuler la progression en temps réel
+  const simulateProgress = (startPercentage, endPercentage, duration = 5000) => {
+    const startTime = Date.now();
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min((elapsed / duration) * (endPercentage - startPercentage) + startPercentage, endPercentage);
+      setProgressPercentage(Math.round(progress));
+      
+      if (progress >= endPercentage) {
+        clearInterval(interval);
+      }
+    }, 100);
+    
+    return interval;
   };
 
   const renderEmployeesList = () => {
@@ -1054,8 +1001,6 @@ const Missions = () => {
 
   const handlePrintMonthlyMission = async (mission) => {
     try {
-      console.log('Mission à imprimer:', mission);
-      
       // Vérifier si le transport est déjà peuplé
       let transport = mission.transportMode;
       
@@ -1065,14 +1010,12 @@ const Missions = () => {
           // Essayer d'abord de récupérer le transport par ID
           const transportResponse = await axiosInstance.get(`/transports/${mission.transportMode}`);
           transport = transportResponse.data;
-          console.log('Transport récupéré par ID:', transport);
         } catch (error) {
           console.error('Erreur lors de la récupération du transport par ID:', error);
           // Si la recherche par ID échoue, récupérer tous les transports et chercher par ID
           try {
             const transportsResponse = await axiosInstance.get('/transports');
             transport = transportsResponse.data.find(t => t._id === mission.transportMode);
-            console.log('Transport trouvé dans la liste:', transport);
           } catch (fallbackError) {
             console.error('Erreur lors de la récupération de tous les transports:', fallbackError);
             throw new Error('Impossible de récupérer les détails du transport');
@@ -1796,48 +1739,96 @@ const Missions = () => {
                   {/* Actions */}
                   <Box sx={{ 
                     display: 'flex',
-                    justifyContent: 'flex-end', 
+                    flexDirection: 'column',
                     gap: 2,
                     mt: 4,
                     pt: 3,
                     borderTop: '1px solid',
                     borderColor: 'divider',
                   }}>
-                    <Button
-                      onClick={() => {
-                        setGroupMissionDialogOpen(false);
-                        resetForm(); // Réinitialiser le formulaire lors de la fermeture
-                      }}
-                      variant="outlined"
-                      startIcon={<CancelIcon />}
-                      sx={{
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        px: 3,
-                      }}
-                    >
-                      إلغاء
-                    </Button>
-                    <Button 
-                      onClick={handleCreateGroupMission}
-                      variant="contained" 
-                      startIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
-                      disabled={!formValid || isSubmitting}
-                      sx={{
-                        borderRadius: 2,
-                        textTransform: 'none',
-                        px: 4,
-                        background: 'linear-gradient(135deg, #1976d2 0%, #2196f3 100%)',
-                        '&:hover': {
-                          background: 'linear-gradient(135deg, #1565c0 0%, #1976d2 100%)',
-                        },
-                        '& .MuiCircularProgress-root': {
-                          color: 'white',
-                        }
-                      }}
-                    >
-                      {isSubmitting ? 'جاري الإنشاء...' : 'إنشاء المهمة'}
-                    </Button>
+                    {/* Message de progression */}
+                    {progressMessage && (
+                      <Box sx={{ width: '100%' }}>
+                        <Alert 
+                          severity="info" 
+                          sx={{ 
+                            borderRadius: 2,
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1,
+                            mb: 2
+                          }}
+                        >
+                          <CircularProgress size={16} />
+                          {progressMessage}
+                        </Alert>
+                        
+                        {/* Barre de progression */}
+                        <Box sx={{ width: '100%', mb: 2 }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              التقدم
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary">
+                              {progressPercentage}%
+                            </Typography>
+                          </Box>
+                          <Box sx={{ width: '100%', bgcolor: 'grey.200', borderRadius: 1, overflow: 'hidden' }}>
+                            <Box 
+                              sx={{ 
+                                width: `${progressPercentage}%`, 
+                                height: 8, 
+                                bgcolor: 'primary.main',
+                                transition: 'width 0.3s ease-in-out',
+                                borderRadius: 1
+                              }} 
+                            />
+                          </Box>
+                        </Box>
+                      </Box>
+                    )}
+                    
+                    <Box sx={{ 
+                      display: 'flex',
+                      justifyContent: 'flex-end', 
+                      gap: 2,
+                    }}>
+                      <Button
+                        onClick={() => {
+                          setGroupMissionDialogOpen(false);
+                          resetForm(); // Réinitialiser le formulaire lors de la fermeture
+                        }}
+                        variant="outlined"
+                        disabled={isSubmitting}
+                        sx={{
+                          borderRadius: 2,
+                          textTransform: 'none',
+                          px: 3,
+                        }}
+                      >
+                        إلغاء
+                      </Button>
+                      <Button 
+                        onClick={handleCreateGroupMission}
+                        variant="contained" 
+                        startIcon={isSubmitting ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+                        disabled={!formValid || isSubmitting}
+                        sx={{
+                          borderRadius: 2,
+                          textTransform: 'none',
+                          px: 4,
+                          background: 'linear-gradient(135deg, #1976d2 0%, #2196f3 100%)',
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #1565c0 0%, #1976d2 100%)',
+                          },
+                          '& .MuiCircularProgress-root': {
+                            color: 'white',
+                          }
+                        }}
+                      >
+                        {isSubmitting ? 'جاري الإنشاء...' : 'إنشاء المهمة'}
+                      </Button>
+                    </Box>
                   </Box>
                 </Box>
               </Box>
