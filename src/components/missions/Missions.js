@@ -227,6 +227,27 @@ const Missions = () => {
     // Mise à jour silencieuse de l'interface
   }, [employeesWithExistingMissions]);
 
+  // Effet pour mettre à jour la liste des employés avec des missions existantes
+  useEffect(() => {
+    if (missions.length > 0 && selectedMonth) {
+      const { startDate, endDate } = getMonthStartAndEnd(selectedMonth);
+      
+      // Trouver les employés qui ont déjà une mission mensuelle pour le mois sélectionné
+      const employeesWithMissions = missions
+        .filter(mission => 
+          mission.type === 'monthly' &&
+          mission.status === 'active' &&
+          new Date(mission.startDate) >= startDate &&
+          new Date(mission.endDate) <= endDate
+        )
+        .map(mission => mission.employee);
+      
+      setEmployeesWithExistingMissions(employeesWithMissions);
+    } else {
+      setEmployeesWithExistingMissions([]);
+    }
+  }, [missions, selectedMonth]);
+
   const getEmployeeStatus = (employee) => {
     const hasExistingMission = employeesWithExistingMissions.some(emp => emp._id === employee._id);
     const isSelected = selectedEmployees.some(emp => emp._id === employee._id);
@@ -346,10 +367,8 @@ const Missions = () => {
   };
 
   const handleEmployeeSelect = (employee) => {
-    const employeeStatus = getEmployeeStatus(employee);
-    
-    // Si l'employé n'est pas sélectionnable, ne rien faire
-    if (!employeeStatus.selectable) {
+    // Vérifier si l'employé a déjà une mission mensuelle en cours
+    if (hasExistingMonthlyMission(employee._id)) {
       const monthName = missionDates.startDate?.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) || 'ce mois';
       const errorMsg = `${employee.nom} ${employee.prenom} a déjà une mission mensuelle pour ${monthName}`;
       setError(errorMsg);
@@ -359,21 +378,18 @@ const Missions = () => {
     // Vérifier si l'employé est déjà sélectionné
     const isAlreadySelected = selectedEmployees.some(emp => emp._id === employee._id);
     
-    
     if (isAlreadySelected) {
       setSelectedEmployees(prev => prev.filter(emp => emp._id !== employee._id));
-      
     } else {
       setSelectedEmployees(prev => [...prev, employee]);
       setError(null);
-      
     }
-    
-    
   };
 
   const handleSelectAll = () => {
-    const availableEmployees = filteredEmployees.filter(emp => getEmployeeStatus(emp).selectable);
+    // Filtrer seulement les employés qui n'ont PAS de mission mensuelle en cours
+    const availableEmployees = filteredEmployees.filter(emp => !hasExistingMonthlyMission(emp._id));
+    
     const allAvailableSelected = availableEmployees.every(emp => 
       selectedEmployees.some(selected => selected._id === emp._id)
     );
@@ -445,17 +461,22 @@ const Missions = () => {
 
   // Ajout de la fonction de vérification des missions existantes
   const hasExistingMonthlyMission = (employeeId) => {
-    const today = new Date();
-    const currentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
-
-    return missions.some(mission => 
-      mission.type === 'monthly' &&
-      mission.status === 'active' &&
-      mission.employee._id === employeeId &&
-      new Date(mission.startDate) >= currentMonth &&
-      new Date(mission.endDate) <= nextMonth
-    );
+    // Vérifier que les missions sont chargées
+    if (!missions || missions.length === 0) {
+      return false;
+    }
+    
+    // Vérifier si l'employé a une mission mensuelle active
+    for (const mission of missions) {
+      if (mission.type === 'monthly' && 
+          mission.status === 'active' && 
+          mission.employee && 
+          mission.employee._id === employeeId) {
+        return true;
+      }
+    }
+    
+    return false;
   };
 
   // Fonction pour réinitialiser le formulaire
@@ -830,13 +851,18 @@ const Missions = () => {
                 variant="outlined"
                 onClick={handleSelectAll}
               >
-                {filteredEmployees.filter(emp => getEmployeeStatus(emp).selectable).every(emp => 
+                {filteredEmployees.filter(emp => !hasExistingMonthlyMission(emp._id)).every(emp => 
                   selectedEmployees.some(selected => selected._id === emp._id)
                 ) ? 'إلغاء تحديد الكل' : 'تحديد الكل'}
               </Button>
               <Typography>
                 {selectedEmployees.length} موظف محدد
               </Typography>
+              {employeesWithExistingMissions.length > 0 && (
+                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                  {employeesWithExistingMissions.length} موظف لديه مهمة شهرية جارية
+                </Typography>
+              )}
             </Box>
             <Box sx={{ 
               display: 'flex', 
