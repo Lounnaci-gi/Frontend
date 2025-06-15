@@ -142,6 +142,12 @@ const Missions = () => {
   const [missionToDelete, setMissionToDelete] = useState(null);
   const [printDialogOpen, setPrintDialogOpen] = useState(false); // État pour le dialogue d'impression
 
+  // États pour les filtres des missions
+  const [missionStatusFilter, setMissionStatusFilter] = useState('all');
+  const [missionCentreFilter, setMissionCentreFilter] = useState('all');
+  const [missionTypeFilter, setMissionTypeFilter] = useState('all');
+  const [missionDateFilter, setMissionDateFilter] = useState('all');
+
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
     documentTitle: `Mission-${selectedMission?.code_mission || 'Impression'}`, // Nom du fichier PDF
@@ -294,6 +300,15 @@ const Missions = () => {
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
     setPage(0);
+    
+    // Réinitialiser les filtres des missions quand on change d'onglet
+    if (newValue === 1) {
+      setMissionStatusFilter('all');
+      setMissionCentreFilter('all');
+      setMissionTypeFilter('all');
+      setMissionDateFilter('all');
+      setSearchTerm('');
+    }
   };
 
   const handleSort = (key) => {
@@ -305,11 +320,75 @@ const Missions = () => {
 
   const filteredMissions = useMemo(() => {
     let filtered = missions.filter((mission) => {
-      const matchesSearch = Object.values(mission).some((value) =>
-        value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      // Filtre de recherche textuelle amélioré
+      let matchesSearch = true;
+      if (searchTerm && searchTerm.trim() !== '') {
+        const searchLower = searchTerm.toLowerCase();
+        
+        // Rechercher dans les champs spécifiques de la mission
+        const searchableFields = [
+          mission.code_mission || '',
+          mission.employee?.nom || '',
+          mission.employee?.prenom || '',
+          mission.employee?.matricule || '',
+          mission.employee?.poste || '',
+          mission.employee?.centre || '',
+          mission.employee?.telephone || '',
+          mission.type || '',
+          mission.status || '',
+          // Rechercher dans les destinations
+          ...(Array.isArray(mission.destinations) 
+            ? mission.destinations.map(dest => dest.name || dest || '').filter(Boolean)
+            : [mission.destination || '']
+          )
+        ];
+        
+        matchesSearch = searchableFields.some(field => 
+          field.toString().toLowerCase().includes(searchLower)
+        );
+      }
+      
+      // Filtre par onglet
       const matchesTab = tabValue === 0 ? true : mission.type === (tabValue === 1 ? 'monthly' : 'special');
-      return matchesSearch && matchesTab;
+      
+      // Filtre par statut
+      const matchesStatus = missionStatusFilter === 'all' || mission.status === missionStatusFilter;
+      
+      // Filtre par centre
+      const matchesCentre = missionCentreFilter === 'all' || 
+        (mission.employee?.centre && mission.employee.centre === missionCentreFilter);
+      
+      // Filtre par type
+      const matchesType = missionTypeFilter === 'all' || mission.type === missionTypeFilter;
+      
+      // Filtre par date
+      let matchesDate = true;
+      if (missionDateFilter !== 'all' && mission.startDate) {
+        const missionDate = new Date(mission.startDate);
+        const today = new Date();
+        
+        switch (missionDateFilter) {
+          case 'this_month':
+            matchesDate = missionDate.getMonth() === today.getMonth() && 
+                         missionDate.getFullYear() === today.getFullYear();
+            break;
+          case 'last_month':
+            const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            matchesDate = missionDate.getMonth() === lastMonth.getMonth() && 
+                         missionDate.getFullYear() === lastMonth.getFullYear();
+            break;
+          case 'this_year':
+            matchesDate = missionDate.getFullYear() === today.getFullYear();
+            break;
+          case 'last_year':
+            matchesDate = missionDate.getFullYear() === today.getFullYear() - 1;
+            break;
+          default:
+            matchesDate = true;
+        }
+      }
+      
+      return matchesSearch && matchesTab && matchesStatus && matchesCentre && matchesType && matchesDate;
     });
 
     // Tri des missions
@@ -327,7 +406,28 @@ const Missions = () => {
     }
 
     return filtered;
-  }, [missions, searchTerm, tabValue, sortConfig]);
+  }, [missions, searchTerm, tabValue, sortConfig, missionStatusFilter, missionCentreFilter, missionTypeFilter, missionDateFilter]);
+
+  // Extraire les centres uniques des missions
+  const missionCentres = useMemo(() => {
+    const centres = missions
+      .map(mission => mission.employee?.centre)
+      .filter(centre => centre && centre.trim() !== '')
+      .sort((a, b) => a.localeCompare(b));
+    
+    return [...new Set(centres)];
+  }, [missions]);
+
+  // Compter les filtres actifs
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (missionStatusFilter !== 'all') count++;
+    if (missionCentreFilter !== 'all') count++;
+    if (missionTypeFilter !== 'all') count++;
+    if (missionDateFilter !== 'all') count++;
+    if (searchTerm && searchTerm.trim() !== '') count++;
+    return count;
+  }, [missionStatusFilter, missionCentreFilter, missionTypeFilter, missionDateFilter, searchTerm]);
 
   const handleOpenForm = (mission = null) => {
     setSelectedMission(mission);
@@ -1259,6 +1359,286 @@ const Missions = () => {
     }
   };
 
+  // Fonction pour imprimer toutes les missions filtrées
+  const handlePrintAllFilteredMissions = async () => {
+    if (filteredMissions.length === 0) {
+      alert('لا توجد مهام للطباعة');
+      return;
+    }
+
+    try {
+      // Créer une nouvelle fenêtre pour l'impression
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        throw new Error('Impossible d\'ouvrir la fenêtre d\'impression');
+      }
+
+      // Préparer les données pour toutes les missions
+      const missionsData = await Promise.all(
+        filteredMissions.map(async (mission) => {
+          try {
+            // Récupérer les détails de l'employé
+            const employeeResponse = await axiosInstance.get(`/employees/${mission.employee}`);
+            const employee = employeeResponse.data;
+
+            // Récupérer les détails des destinations
+            const destinations = await Promise.all(
+              (Array.isArray(mission.destinations) ? mission.destinations : [mission.destination])
+                .filter(Boolean)
+                .map(async (destId) => {
+                  try {
+                    const response = await axiosInstance.get(`/locations/${destId}`);
+                    return response.data;
+                  } catch (error) {
+                    console.error('Erreur lors de la récupération de la destination:', error);
+                    return { name: destId, address: destId, city: 'Alger', country: 'Algeria' };
+                  }
+                })
+            );
+
+            // Récupérer les détails du transport
+            let transport = mission.transportMode;
+            if (!transport || typeof transport === 'string') {
+              try {
+                const transportResponse = await axiosInstance.get(`/transports/${mission.transportMode}`);
+                transport = transportResponse.data;
+              } catch (error) {
+                transport = { nom: 'غير محدد' };
+              }
+            }
+
+            return {
+              mission,
+              employee,
+              destinations,
+              transport
+            };
+          } catch (error) {
+            console.error('Erreur lors de la récupération des données de la mission:', error);
+            return null;
+          }
+        })
+      );
+
+      // Filtrer les missions avec des données valides
+      const validMissionsData = missionsData.filter(data => data !== null);
+
+      // Créer le contenu HTML pour toutes les missions (une page par mission)
+      const content = `
+        <!DOCTYPE html>
+        <html dir="rtl" lang="ar">
+        <head>
+          <meta charset="UTF-8">
+          <title>مهام متعددة</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
+            body {
+              font-family: 'Cairo', sans-serif;
+              margin: 0;
+              padding: 0;
+              background-color: white;
+            }
+            .mission-page {
+              width: 210mm;
+              min-height: 297mm;
+              padding: 20px;
+              margin: 0 auto;
+              background-color: white;
+              box-sizing: border-box;
+              page-break-after: always;
+            }
+            .mission-page:last-child {
+              page-break-after: auto;
+            }
+            .container {
+              max-width: 800px;
+              margin: 0 auto;
+              padding: 20px;
+              border: 1px solid #ccc;
+              height: calc(100% - 40px);
+              box-sizing: border-box;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+            }
+            .header h1 {
+              margin: 0;
+              color: #333;
+            }
+            .info-section {
+              margin-bottom: 20px;
+            }
+            .info-section h2 {
+              color: #2c3e50;
+              border-bottom: 2px solid #3498db;
+              padding-bottom: 5px;
+              margin-bottom: 15px;
+            }
+            .info-grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 15px;
+            }
+            .info-item {
+              margin-bottom: 10px;
+            }
+            .info-item strong {
+              color: #2c3e50;
+              display: inline-block;
+              width: 150px;
+            }
+            .destinations {
+              margin-top: 20px;
+            }
+            .destination-item {
+              background-color: #f8f9fa;
+              padding: 10px;
+              margin-bottom: 10px;
+              border-radius: 5px;
+            }
+            .footer {
+              margin-top: 30px;
+              text-align: center;
+              color: #666;
+            }
+            @media print {
+              body {
+                padding: 0;
+              }
+              .mission-page {
+                page-break-after: always;
+                margin: 0;
+                padding: 20px;
+              }
+              .mission-page:last-child {
+                page-break-after: auto;
+              }
+              .container {
+                border: none;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          ${validMissionsData.map((data, index) => {
+            const { mission, employee, destinations, transport } = data;
+            const startDate = new Date(mission.startDate).toLocaleDateString('ar-SA');
+            const endDate = new Date(mission.endDate).toLocaleDateString('ar-SA');
+            
+            return `
+              <div class="mission-page">
+                <div class="container">
+                  <div class="header">
+                    <h1>مهمة ${mission.type === 'monthly' ? 'شهرية' : 'خاصة'}</h1>
+                  </div>
+                  
+                  <div class="info-section">
+                    <h2>معلومات المهمة</h2>
+                    <div class="info-grid">
+                      <div class="info-item">
+                        <strong>رقم المهمة:</strong>
+                        <span>${mission.code_mission || mission.code || 'غير محدد'}</span>
+                      </div>
+                      <div class="info-item">
+                        <strong>تاريخ البداية:</strong>
+                        <span>${startDate}</span>
+                      </div>
+                      <div class="info-item">
+                        <strong>تاريخ النهاية:</strong>
+                        <span>${endDate}</span>
+                      </div>
+                      <div class="info-item">
+                        <strong>وسيلة النقل:</strong>
+                        <span>${transport.nom || 'غير محدد'}</span>
+                      </div>
+                      <div class="info-item">
+                        <strong>الحالة:</strong>
+                        <span>${mission.status === 'active' ? 'نشط' : mission.status === 'completed' ? 'مكتمل' : 'ملغي'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="info-section">
+                    <h2>معلومات الموظف</h2>
+                    <div class="info-grid">
+                      <div class="info-item">
+                        <strong>الاسم:</strong>
+                        <span>${employee.nom} ${employee.prenom}</span>
+                      </div>
+                      <div class="info-item">
+                        <strong>الرقم الوظيفي:</strong>
+                        <span>${employee.matricule}</span>
+                      </div>
+                      <div class="info-item">
+                        <strong>الوظيفة:</strong>
+                        <span>${employee.poste || 'غير محدد'}</span>
+                      </div>
+                      <div class="info-item">
+                        <strong>المركز:</strong>
+                        <span>${employee.centre || 'غير محدد'}</span>
+                      </div>
+                      <div class="info-item">
+                        <strong>الهاتف:</strong>
+                        <span>${employee.telephone || 'غير محدد'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="info-section">
+                    <h2>الوجهات</h2>
+                    <div class="destinations">
+                      ${destinations.map(dest => `
+                        <div class="destination-item">
+                          <div class="info-item">
+                            <strong>الاسم:</strong>
+                            <span>${dest.name}</span>
+                          </div>
+                          <div class="info-item">
+                            <strong>العنوان:</strong>
+                            <span>${dest.address}</span>
+                          </div>
+                          <div class="info-item">
+                            <strong>المدينة:</strong>
+                            <span>${dest.city}</span>
+                          </div>
+                          <div class="info-item">
+                            <strong>البلد:</strong>
+                            <span>${dest.country}</span>
+                          </div>
+                        </div>
+                      `).join('')}
+                    </div>
+                  </div>
+
+                  <div class="footer">
+                    <p>تم إنشاء هذه الوثيقة في ${new Date().toLocaleDateString('ar-SA')}</p>
+                    <p>صفحة ${index + 1} من ${validMissionsData.length}</p>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </body>
+        </html>
+      `;
+
+      // Écrire le contenu dans la fenêtre et imprimer
+      printWindow.document.write(content);
+      printWindow.document.close();
+      
+      // Attendre que le contenu soit chargé avant d'imprimer
+      printWindow.onload = () => {
+        printWindow.print();
+        printWindow.close();
+      };
+
+    } catch (error) {
+      console.error('Erreur lors de l\'impression groupée:', error);
+      alert(`Erreur lors de l'impression: ${error.message}`);
+    }
+  };
+
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ar}>
       <Box sx={{ direction: 'rtl' }}>
@@ -1307,6 +1687,148 @@ const Missions = () => {
             {tabValue === 0 && renderEmployeesList()}
             {tabValue === 1 && (
               <>
+                {/* Interface de filtres pour les missions */}
+                <Paper sx={{ mb: 2, p: 2 }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: 2, 
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    alignItems: { xs: 'stretch', sm: 'center' },
+                    justifyContent: 'space-between'
+                  }}>
+                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                        فلاتر المهام
+                        {activeFiltersCount > 0 && (
+                          <Chip
+                            label={`${activeFiltersCount} نشط`}
+                            size="small"
+                            color="primary"
+                            sx={{ ml: 1, height: 20 }}
+                          />
+                        )}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {filteredMissions.length} مهمة
+                        {searchTerm && searchTerm.trim() !== '' && (
+                          <span style={{ color: 'primary.main', fontWeight: 'bold' }}>
+                            {' '}(نتيجة البحث)
+                          </span>
+                        )}
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => {
+                          setMissionStatusFilter('all');
+                          setMissionCentreFilter('all');
+                          setMissionTypeFilter('all');
+                          setMissionDateFilter('all');
+                          setSearchTerm('');
+                        }}
+                        sx={{ ml: 1 }}
+                      >
+                        إعادة تعيين
+                      </Button>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        startIcon={<PrintIcon />}
+                        onClick={() => handlePrintAllFilteredMissions()}
+                        disabled={filteredMissions.length === 0}
+                        sx={{ ml: 1 }}
+                      >
+                        طباعة جميع المهام ({filteredMissions.length})
+                      </Button>
+                    </Box>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      gap: 2,
+                      flexDirection: { xs: 'column', sm: 'row' },
+                      alignItems: { xs: 'stretch', sm: 'center' }
+                    }}>
+                      {/* Filtre par statut */}
+                      <FormControl sx={{ minWidth: 150 }}>
+                        <InputLabel>الحالة</InputLabel>
+                        <Select
+                          value={missionStatusFilter}
+                          onChange={(e) => setMissionStatusFilter(e.target.value)}
+                          label="الحالة"
+                        >
+                          <MenuItem value="all">جميع الحالات</MenuItem>
+                          <MenuItem value="active">نشط</MenuItem>
+                          <MenuItem value="completed">مكتمل</MenuItem>
+                          <MenuItem value="cancelled">ملغي</MenuItem>
+                        </Select>
+                      </FormControl>
+
+                      {/* Filtre par centre */}
+                      <FormControl sx={{ minWidth: 150 }}>
+                        <InputLabel>المركز</InputLabel>
+                        <Select
+                          value={missionCentreFilter}
+                          onChange={(e) => setMissionCentreFilter(e.target.value)}
+                          label="المركز"
+                        >
+                          <MenuItem value="all">جميع المراكز</MenuItem>
+                          {missionCentres.map((centre) => (
+                            <MenuItem key={centre} value={centre}>
+                              {centre}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+
+                      {/* Filtre par type */}
+                      <FormControl sx={{ minWidth: 150 }}>
+                        <InputLabel>النوع</InputLabel>
+                        <Select
+                          value={missionTypeFilter}
+                          onChange={(e) => setMissionTypeFilter(e.target.value)}
+                          label="النوع"
+                        >
+                          <MenuItem value="all">جميع الأنواع</MenuItem>
+                          <MenuItem value="monthly">شهرية</MenuItem>
+                          <MenuItem value="special">خاصة</MenuItem>
+                        </Select>
+                      </FormControl>
+
+                      {/* Filtre par date */}
+                      <FormControl sx={{ minWidth: 150 }}>
+                        <InputLabel>التاريخ</InputLabel>
+                        <Select
+                          value={missionDateFilter}
+                          onChange={(e) => setMissionDateFilter(e.target.value)}
+                          label="التاريخ"
+                        >
+                          <MenuItem value="all">جميع التواريخ</MenuItem>
+                          <MenuItem value="this_month">هذا الشهر</MenuItem>
+                          <MenuItem value="last_month">الشهر الماضي</MenuItem>
+                          <MenuItem value="this_year">هذا العام</MenuItem>
+                          <MenuItem value="last_year">العام الماضي</MenuItem>
+                        </Select>
+                      </FormControl>
+
+                      {/* Recherche textuelle */}
+                      <TextField
+                        fullWidth
+                        variant="outlined"
+                        placeholder="بحث في المهام..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        InputProps={{
+                          startAdornment: (
+                            <InputAdornment position="start">
+                              <SearchIcon />
+                            </InputAdornment>
+                          ),
+                        }}
+                        sx={{ minWidth: 200 }}
+                      />
+                    </Box>
+                  </Box>
+                </Paper>
+
                 <TableContainer component={Paper}>
                   <Table>
                     <TableHead>
