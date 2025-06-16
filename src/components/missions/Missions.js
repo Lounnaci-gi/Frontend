@@ -68,6 +68,7 @@ import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { useReactToPrint } from 'react-to-print';
 import MissionPrint from './MissionPrint';
+import ReactDOM from 'react-dom';
 
 // Importation dynamique de MonthPicker pour éviter les dépendances circulaires
 const MonthPicker = React.lazy(() => import('./MonthPicker'));
@@ -1367,34 +1368,65 @@ const Missions = () => {
     }
 
     try {
-      // Créer une nouvelle fenêtre pour l'impression
-      const printWindow = window.open('', '_blank');
-      if (!printWindow) {
-        throw new Error('Impossible d\'ouvrir la fenêtre d\'impression');
-      }
-
+      console.log('Début de l\'impression des missions. Nombre de missions:', filteredMissions.length);
+      
       // Préparer les données pour toutes les missions
       const missionsData = await Promise.all(
         filteredMissions.map(async (mission) => {
           try {
+            console.log('Traitement de la mission:', mission.code_mission);
+            console.log('Structure de la mission:', JSON.stringify(mission, null, 2));
+            
             // Récupérer les détails de l'employé
-            const employeeResponse = await axiosInstance.get(`/employees/${mission.employee}`);
+            let employeeId;
+            if (mission.employee) {
+              if (typeof mission.employee === 'object') {
+                employeeId = mission.employee._id;
+                console.log('Employee est un objet, ID:', employeeId);
+              } else {
+                employeeId = mission.employee;
+                console.log('Employee est un ID:', employeeId);
+              }
+            } else {
+              console.error('Pas d\'employé trouvé pour la mission:', mission.code_mission);
+              return null;
+            }
+
+            if (!employeeId) {
+              console.error('ID d\'employé invalide pour la mission:', mission.code_mission);
+              return null;
+            }
+
+            console.log('Tentative de récupération de l\'employé avec l\'ID:', employeeId);
+            const employeeResponse = await axiosInstance.get(`/employees/${employeeId}`);
             const employee = employeeResponse.data;
+            console.log('Données employé récupérées:', employee.nom, employee.prenom);
 
             // Récupérer les détails des destinations
             const destinations = await Promise.all(
               (Array.isArray(mission.destinations) ? mission.destinations : [mission.destination])
                 .filter(Boolean)
-                .map(async (destId) => {
+                .map(async (dest) => {
                   try {
+                    // Gérer le cas où dest est un objet ou un ID
+                    const destId = typeof dest === 'object' ? dest._id : dest;
+                    console.log('Tentative de récupération de la destination avec l\'ID:', destId);
+                    
+                    if (!destId) {
+                      console.error('ID de destination invalide');
+                      return null;
+                    }
+
                     const response = await axiosInstance.get(`/locations/${destId}`);
                     return response.data;
                   } catch (error) {
                     console.error('Erreur lors de la récupération de la destination:', error);
-                    return { name: destId, address: destId, city: 'Alger', country: 'Algeria' };
+                    console.error('Détails de l\'erreur:', error.response?.data || error.message);
+                    return null;
                   }
                 })
-            );
+            ).then(dests => dests.filter(Boolean)); // Filtrer les destinations nulles
+            console.log('Destinations récupérées:', destinations.length);
 
             // Récupérer les détails du transport
             let transport = mission.transportMode;
@@ -1403,18 +1435,23 @@ const Missions = () => {
                 const transportResponse = await axiosInstance.get(`/transports/${mission.transportMode}`);
                 transport = transportResponse.data;
               } catch (error) {
+                console.error('Erreur lors de la récupération du transport:', error);
                 transport = { nom: 'غير محدد' };
               }
             }
+            console.log('Transport récupéré:', transport.nom);
 
-            return {
-              mission,
+            const missionData = {
+              ...mission,
               employee,
               destinations,
               transport
             };
+            console.log('Mission complète préparée:', missionData);
+            return missionData;
           } catch (error) {
             console.error('Erreur lors de la récupération des données de la mission:', error);
+            console.error('Détails de l\'erreur:', error.response?.data || error.message);
             return null;
           }
         })
@@ -1422,217 +1459,67 @@ const Missions = () => {
 
       // Filtrer les missions avec des données valides
       const validMissionsData = missionsData.filter(data => data !== null);
+      console.log('Nombre de missions valides:', validMissionsData.length);
 
-      // Créer le contenu HTML pour toutes les missions (une page par mission)
-      const content = `
-        <!DOCTYPE html>
-        <html dir="rtl" lang="ar">
-        <head>
-          <meta charset="UTF-8">
-          <title>مهام متعددة</title>
-          <style>
-            @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
-            body {
-              font-family: 'Cairo', sans-serif;
-              margin: 0;
-              padding: 0;
-              background-color: white;
-            }
-            .mission-page {
-              width: 210mm;
-              min-height: 297mm;
-              padding: 20px;
-              margin: 0 auto;
-              background-color: white;
-              box-sizing: border-box;
-              page-break-after: always;
-            }
-            .mission-page:last-child {
-              page-break-after: auto;
-            }
-            .container {
-              max-width: 800px;
-              margin: 0 auto;
-              padding: 20px;
-              border: 1px solid #ccc;
-              height: calc(100% - 40px);
-              box-sizing: border-box;
-            }
-            .header {
-              text-align: center;
-              margin-bottom: 30px;
-            }
-            .header h1 {
-              margin: 0;
-              color: #333;
-            }
-            .info-section {
-              margin-bottom: 20px;
-            }
-            .info-section h2 {
-              color: #2c3e50;
-              border-bottom: 2px solid #3498db;
-              padding-bottom: 5px;
-              margin-bottom: 15px;
-            }
-            .info-grid {
-              display: grid;
-              grid-template-columns: repeat(2, 1fr);
-              gap: 15px;
-            }
-            .info-item {
-              margin-bottom: 10px;
-            }
-            .info-item strong {
-              color: #2c3e50;
-              display: inline-block;
-              width: 150px;
-            }
-            .destinations {
-              margin-top: 20px;
-            }
-            .destination-item {
-              background-color: #f8f9fa;
-              padding: 10px;
-              margin-bottom: 10px;
-              border-radius: 5px;
-            }
-            .footer {
-              margin-top: 30px;
-              text-align: center;
-              color: #666;
-            }
-            @media print {
-              body {
-                padding: 0;
-              }
-              .mission-page {
-                page-break-after: always;
-                margin: 0;
-                padding: 20px;
-              }
-              .mission-page:last-child {
-                page-break-after: auto;
-              }
-              .container {
-                border: none;
-              }
-            }
-          </style>
-        </head>
-        <body>
-          ${validMissionsData.map((data, index) => {
-            const { mission, employee, destinations, transport } = data;
-            const startDate = new Date(mission.startDate).toLocaleDateString('ar-SA');
-            const endDate = new Date(mission.endDate).toLocaleDateString('ar-SA');
-            
-            return `
-              <div class="mission-page">
-                <div class="container">
-                  <div class="header">
-                    <h1>مهمة ${mission.type === 'monthly' ? 'شهرية' : 'خاصة'}</h1>
-                  </div>
-                  
-                  <div class="info-section">
-                    <h2>معلومات المهمة</h2>
-                    <div class="info-grid">
-                      <div class="info-item">
-                        <strong>رقم المهمة:</strong>
-                        <span>${mission.code_mission || mission.code || 'غير محدد'}</span>
-                      </div>
-                      <div class="info-item">
-                        <strong>تاريخ البداية:</strong>
-                        <span>${startDate}</span>
-                      </div>
-                      <div class="info-item">
-                        <strong>تاريخ النهاية:</strong>
-                        <span>${endDate}</span>
-                      </div>
-                      <div class="info-item">
-                        <strong>وسيلة النقل:</strong>
-                        <span>${transport.nom || 'غير محدد'}</span>
-                      </div>
-                      <div class="info-item">
-                        <strong>الحالة:</strong>
-                        <span>${mission.status === 'active' ? 'نشط' : mission.status === 'completed' ? 'مكتمل' : 'ملغي'}</span>
-                      </div>
-                    </div>
-                  </div>
+      if (validMissionsData.length === 0) {
+        alert('Aucune mission valide à imprimer');
+        return;
+      }
 
-                  <div class="info-section">
-                    <h2>معلومات الموظف</h2>
-                    <div class="info-grid">
-                      <div class="info-item">
-                        <strong>الاسم:</strong>
-                        <span>${employee.nom} ${employee.prenom}</span>
-                      </div>
-                      <div class="info-item">
-                        <strong>الرقم الوظيفي:</strong>
-                        <span>${employee.matricule}</span>
-                      </div>
-                      <div class="info-item">
-                        <strong>الوظيفة:</strong>
-                        <span>${employee.poste || 'غير محدد'}</span>
-                      </div>
-                      <div class="info-item">
-                        <strong>المركز:</strong>
-                        <span>${employee.centre || 'غير محدد'}</span>
-                      </div>
-                      <div class="info-item">
-                        <strong>الهاتف:</strong>
-                        <span>${employee.telephone || 'غير محدد'}</span>
-                      </div>
-                    </div>
-                  </div>
+      // Ouvrir le dialogue d'impression
+      setPrintDialogOpen(true);
+      setSelectedMission(validMissionsData[0]); // Sélectionner la première mission pour l'aperçu
+      console.log('Première mission sélectionnée pour l\'aperçu:', validMissionsData[0].code_mission);
 
-                  <div class="info-section">
-                    <h2>الوجهات</h2>
-                    <div class="destinations">
-                      ${destinations.map(dest => `
-                        <div class="destination-item">
-                          <div class="info-item">
-                            <strong>الاسم:</strong>
-                            <span>${dest.name}</span>
-                          </div>
-                          <div class="info-item">
-                            <strong>العنوان:</strong>
-                            <span>${dest.address}</span>
-                          </div>
-                          <div class="info-item">
-                            <strong>المدينة:</strong>
-                            <span>${dest.city}</span>
-                          </div>
-                          <div class="info-item">
-                            <strong>البلد:</strong>
-                            <span>${dest.country}</span>
-                          </div>
-                        </div>
-                      `).join('')}
-                    </div>
-                  </div>
+      // Fonction pour imprimer toutes les missions
+      const printAllMissions = async () => {
+        console.log('Début de l\'impression de toutes les missions');
+        for (let i = 0; i < validMissionsData.length; i++) {
+          console.log(`Impression de la mission ${i + 1}/${validMissionsData.length}`);
+          setSelectedMission(validMissionsData[i]);
+          
+          // Attendre que le composant soit mis à jour
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Créer une nouvelle fenêtre d'impression pour chaque mission
+          const printWindow = window.open('', '_blank');
+          if (!printWindow) {
+            alert('Veuillez autoriser les popups pour l\'impression');
+            return;
+          }
 
-                  <div class="footer">
-                    <p>تم إنشاء هذه الوثيقة في ${new Date().toLocaleDateString('ar-SA')}</p>
-                    <p>صفحة ${index + 1} من ${validMissionsData.length}</p>
-                  </div>
-                </div>
-              </div>
-            `;
-          }).join('')}
-        </body>
-        </html>
-      `;
+          // Rendre le composant d'impression
+          const printContent = ReactDOM.render(
+            <MissionPrint mission={validMissionsData[i]} ref={printRef} />,
+            printWindow.document.body
+          );
 
-      // Écrire le contenu dans la fenêtre et imprimer
-      printWindow.document.write(content);
-      printWindow.document.close();
-      
-      // Attendre que le contenu soit chargé avant d'imprimer
-      printWindow.onload = () => {
-        printWindow.print();
-        printWindow.close();
+          // Attendre que le contenu soit chargé
+          await new Promise(resolve => setTimeout(resolve, 500));
+
+          // Imprimer
+          printWindow.print();
+          
+          // Fermer la fenêtre après l'impression
+          printWindow.close();
+
+          // Attendre un peu entre chaque impression
+          if (i < validMissionsData.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+        console.log('Fin de l\'impression de toutes les missions');
+        setPrintDialogOpen(false);
       };
 
+      // Modifier le bouton d'impression dans le dialogue
+      const printButton = document.querySelector('.MuiDialogActions-root button:last-child');
+      if (printButton) {
+        printButton.onclick = printAllMissions;
+        console.log('Bouton d\'impression modifié pour imprimer toutes les missions');
+      } else {
+        console.error('Bouton d\'impression non trouvé dans le dialogue');
+      }
     } catch (error) {
       console.error('Erreur lors de l\'impression groupée:', error);
       alert(`Erreur lors de l'impression: ${error.message}`);
