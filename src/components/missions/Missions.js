@@ -1126,6 +1126,268 @@ const Missions = () => {
     );
   };
 
+  // Fonction d'impression simple avec la mise en forme originale
+  const handlePrintMission = () => {
+    try {
+      console.log('Impression de la mission avec la mise en forme originale');
+      
+      // Créer une nouvelle fenêtre pour l'impression
+      const printWindow = window.open('data:text/html;charset=utf-8,', '_blank');
+      if (!printWindow) {
+        alert('Veuillez autoriser les popups pour l\'impression');
+        return;
+      }
+
+      const employee = selectedMission.employee || {};
+      const startDate = selectedMission.startDate ? new Date(selectedMission.startDate).toLocaleDateString('fr-FR') : '________________';
+      const endDate = selectedMission.endDate ? new Date(selectedMission.endDate).toLocaleDateString('fr-FR') : '________________';
+
+      const content = `
+        <!DOCTYPE html>
+        <html dir="rtl" lang="ar">
+        <head>
+          <meta charset="UTF-8">
+          <title></title>
+          <style>
+            body {
+              font-family: 'Arabic Typesetting', 'Traditional Arabic', Arial, sans-serif;
+              margin: 0;
+              padding: 0;
+              background-color: white;
+              direction: rtl;
+              -webkit-print-color-adjust: exact;
+              color-adjust: exact;
+            }
+            .print-container {
+              padding: 40px;
+              position: relative;
+              min-height: 297mm;
+              width: 210mm;
+              margin: 0 auto;
+              background-color: white;
+              font-family: 'Arabic Typesetting', 'Traditional Arabic', Arial, sans-serif;
+              direction: rtl;
+            }
+            .title {
+              text-align: center;
+              position: absolute;
+              top: 5cm;
+              left: 50%;
+              transform: translateX(-50%);
+              font-size: 3.5em;
+              font-weight: bold;
+              font-family: 'Arabic Typesetting', 'Traditional Arabic', Arial, sans-serif;
+              text-decoration: underline;
+              width: 4.35cm;
+            }
+            .region-left {
+              position: absolute;
+              top: 5cm;
+              right: 1cm;
+              font-size: 2.3em;
+              font-family: 'Arabic Typesetting', 'Traditional Arabic', Arial, sans-serif;
+            }
+            .code-right {
+              position: absolute;
+              top: 5cm;
+              left: 1cm;
+              font-size: 2em;
+              font-family: 'Arabic Typesetting', 'Traditional Arabic', Arial, sans-serif;
+            }
+            .wilaya-left {
+              position: absolute;
+              top: 5.8cm;
+              right: 1cm;
+              font-size: 2.3em;
+              font-family: 'Arabic Typesetting', 'Traditional Arabic', Arial, sans-serif;
+            }
+            .label {
+              position: absolute;
+              right: 1cm;
+              font-size: 2.2em;
+              font-family: 'Arabic Typesetting', 'Traditional Arabic', Arial, sans-serif;
+            }
+            .label-nom { top: 8cm; }
+            .label-prenom { top: 10cm; }
+            .label-centre { top: 12cm; }
+            .label-poste { top: 14cm; }
+            .label-raison { top: 16cm; }
+            .label-start { top: 18cm; }
+            .label-end { top: 20cm; }
+            .label-transport { top: 22cm; }
+            .label-destination { top: 24cm; }
+            
+            .value {
+              position: absolute;
+              left: 50%;
+              transform: translateX(-50%);
+              font-size: 2.2em;
+              font-family: 'Arabic Typesetting', 'Traditional Arabic', Arial, sans-serif;
+              min-width: 8cm;
+              text-align: center;
+            }
+            .value-nom { top: 8cm; }
+            .value-prenom { top: 10cm; }
+            .value-centre { top: 12cm; }
+            .value-poste { top: 14cm; }
+            .value-raison { top: 16cm; }
+            .value-start { top: 18cm; }
+            .value-end { top: 20cm; }
+            .value-transport { top: 22cm; }
+            .value-destination { top: 24cm; }
+            
+            .dots-left {
+              position: absolute;
+              left: 4cm;
+              font-size: 2.2em;
+              font-family: 'Arabic Typesetting', 'Traditional Arabic', Arial, sans-serif;
+              width: 3cm;
+            }
+            .dots-left-nom { top: 8cm; }
+            .dots-left-prenom { top: 10cm; }
+            .dots-left-centre { top: 12cm; }
+            .dots-left-poste { top: 14cm; }
+            .dots-left-raison { top: 16cm; }
+            .dots-left-start { top: 18cm; }
+            .dots-left-end { top: 20cm; }
+            .dots-left-transport { top: 22cm; }
+            .dots-left-destination { top: 24cm; }
+            
+            .dots-right {
+              position: absolute;
+              right: 4cm;
+              font-size: 2.2em;
+              font-family: 'Arabic Typesetting', 'Traditional Arabic', Arial, sans-serif;
+              width: 3cm;
+              text-align: right;
+            }
+            .dots-right-nom { top: 8cm; }
+            .dots-right-prenom { top: 10cm; }
+            .dots-right-centre { top: 12cm; }
+            .dots-right-poste { top: 14cm; }
+            .dots-right-raison { top: 16cm; }
+            .dots-right-start { top: 18cm; }
+            .dots-right-end { top: 20cm; }
+            .dots-right-transport { top: 22cm; }
+            .dots-right-destination { top: 24cm; }
+            
+            .date-footer {
+              position: absolute;
+              top: 26cm;
+              left: 2cm;
+              font-size: 2em;
+              font-family: 'Arabic Typesetting', 'Traditional Arabic', Arial, sans-serif;
+            }
+            
+            @media print {
+              body {
+                margin: 0;
+                padding: 0;
+              }
+              .print-container {
+                padding: 0;
+                margin: 0;
+                width: 100%;
+                min-height: auto;
+              }
+              @page {
+                margin: 0;
+                size: A4;
+              }
+              /* Masquer les éléments d'en-tête automatiques */
+              @page :first {
+                margin-top: 0;
+              }
+              @page :left {
+                margin-left: 0;
+              }
+              @page :right {
+                margin-right: 0;
+              }
+              /* Masquer la date/heure et pagination */
+              @page {
+                margin-header: 0;
+                margin-footer: 0;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-container">
+            <div class="title">تكليف بمهمة</div>
+            <div class="region-left">منطقة الجزائر</div>
+            <div class="code-right">${selectedMission.code_mission || 'N/A'}</div>
+            <div class="wilaya-left">ولاية المدية</div>
+            
+            <div class="label label-nom">اللقب</div>
+            <div class="label label-prenom">الاسم</div>
+            <div class="label label-centre">التعيين</div>
+            <div class="label label-poste">المهنة</div>
+            <div class="label label-raison">سبب التنقل</div>
+            <div class="label label-start">تاريخ الانطلاق</div>
+            <div class="label label-end">تاريخ الرجوع</div>
+            <div class="label label-transport">وسيلة النقل</div>
+            <div class="label label-destination">يسافر الى</div>
+            
+            <div class="value value-nom">${employee.nom || '________________'}</div>
+            <div class="value value-prenom">${employee.prenom || '________________'}</div>
+            <div class="value value-centre">${employee.centre || '________________'}</div>
+            <div class="value value-poste">${employee.poste || employee.fonction || '________________'}</div>
+            <div class="value value-raison">مهمة</div>
+            <div class="value value-start">${startDate}</div>
+            <div class="value value-end">${endDate}</div>
+            <div class="value value-transport">${selectedMission.transportMode?.nom || '________________'}</div>
+            <div class="value value-destination">${selectedMission.destinations && selectedMission.destinations.length > 0 ? (typeof selectedMission.destinations[0] === 'object' ? selectedMission.destinations[0].name : selectedMission.destinations[0]) : '________________'}</div>
+            
+            <div class="dots-left dots-left-nom">....................</div>
+            <div class="dots-left dots-left-prenom">....................</div>
+            <div class="dots-left dots-left-centre">....................</div>
+            <div class="dots-left dots-left-poste">....................</div>
+            <div class="dots-left dots-left-raison">....................</div>
+            <div class="dots-left dots-left-start">....................</div>
+            <div class="dots-left dots-left-end">....................</div>
+            <div class="dots-left dots-left-transport">....................</div>
+            <div class="dots-left dots-left-destination">....................</div>
+            
+            <div class="dots-right dots-right-nom">....................</div>
+            <div class="dots-right dots-right-prenom">....................</div>
+            <div class="dots-right dots-right-centre">....................</div>
+            <div class="dots-right dots-right-poste">....................</div>
+            <div class="dots-right dots-right-raison">....................</div>
+            <div class="dots-right dots-right-start">....................</div>
+            <div class="dots-right dots-right-end">....................</div>
+            <div class="dots-right dots-right-transport">....................</div>
+            <div class="dots-right dots-right-destination">....................</div>
+            
+            <div class="date-footer">المدية : ${new Date().toLocaleDateString('fr-FR')}</div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      // Écrire le contenu dans la fenêtre
+      printWindow.document.write(content);
+      printWindow.document.close();
+      
+      // Attendre que le contenu soit chargé puis imprimer
+      printWindow.onload = () => {
+        setTimeout(() => {
+          console.log('Impression en cours...');
+          // Désactiver les en-têtes et pieds de page
+          printWindow.document.title = '';
+          printWindow.print();
+          printWindow.close();
+          setPrintDialogOpen(false);
+          console.log('Impression terminée');
+        }, 500);
+      };
+
+    } catch (error) {
+      console.error('Erreur lors de l\'impression:', error);
+      alert(`Erreur lors de l'impression: ${error.message}`);
+    }
+  };
+
   const handlePrintMonthlyMission = async (mission) => {
     try {
       // Vérifier si le transport est déjà peuplé
@@ -1173,9 +1435,10 @@ const Missions = () => {
       const employee = employeeResponse.data;
 
       // Créer une nouvelle fenêtre pour l'impression
-      const printWindow = window.open('', '_blank');
+      const printWindow = window.open('data:text/html;charset=utf-8,', '_blank');
       if (!printWindow) {
-        throw new Error('Impossible d\'ouvrir la fenêtre d\'impression');
+        alert('Veuillez autoriser les popups pour l\'impression');
+        return;
       }
 
       // Formater les dates
@@ -1188,7 +1451,7 @@ const Missions = () => {
         <html dir="rtl" lang="ar">
         <head>
           <meta charset="UTF-8">
-          <title>مهمة شهرية</title>
+          <title></title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
             body {
@@ -1482,7 +1745,7 @@ const Missions = () => {
           await new Promise(resolve => setTimeout(resolve, 1000));
           
           // Créer une nouvelle fenêtre d'impression pour chaque mission
-          const printWindow = window.open('', '_blank');
+          const printWindow = window.open('data:text/html;charset=utf-8,', '_blank');
           if (!printWindow) {
             alert('Veuillez autoriser les popups pour l\'impression');
             return;
@@ -1866,15 +2129,47 @@ const Missions = () => {
           <Dialog
             open={printDialogOpen}
             onClose={() => setPrintDialogOpen(false)}
-            maxWidth="md"
+            maxWidth="lg"
             fullWidth
+            PaperProps={{
+              sx: {
+                '@media print': {
+                  boxShadow: 'none',
+                  margin: 0,
+                  maxWidth: 'none',
+                  width: '100%'
+                }
+              }
+            }}
           >
-            <DialogContent>
-              {selectedMission && <MissionPrint mission={selectedMission} ref={printRef} />}
+            <DialogContent sx={{ 
+              p: 0,
+              direction: 'ltr',
+              '@media print': {
+                p: 0,
+                overflow: 'visible'
+              }
+            }}>
+              {selectedMission && (
+                <Box sx={{ 
+                  display: 'flex', 
+                  justifyContent: 'flex-end',
+                  direction: 'ltr',
+                  '@media print': {
+                    display: 'block'
+                  }
+                }}>
+                  <MissionPrint mission={selectedMission} ref={printRef} />
+                </Box>
+              )}
             </DialogContent>
-            <DialogActions>
+            <DialogActions sx={{
+              '@media print': {
+                display: 'none'
+              }
+            }}>
               <Button onClick={() => setPrintDialogOpen(false)}>إلغاء</Button>
-              <Button onClick={handlePrint} color="primary" variant="contained">
+              <Button onClick={handlePrintMission} color="primary" variant="contained">
                 طباعة
               </Button>
             </DialogActions>

@@ -23,8 +23,31 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
       backgroundColor: 'white',
       fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
       direction: 'rtl',
-      '@import': 'url("https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;700&display=swap")'
+      '@media print': {
+        p: 0,
+        margin: 0,
+        width: '100%',
+        minHeight: 'auto'
+      }
     }}>
+      {/* Import de la police Google Fonts */}
+      <style>
+        {`
+          @import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;700&display=swap');
+          @media print {
+            @page {
+              size: A4;
+              margin: 0;
+            }
+            body {
+              margin: 0;
+              -webkit-print-color-adjust: exact;
+              color-adjust: exact;
+            }
+          }
+        `}
+      </style>
+      
       <Typography variant="h4" sx={{ 
         textAlign: 'center',
         position: 'absolute',
@@ -33,9 +56,13 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         transform: 'translateX(-50%)',
         fontSize: '3.5em',
         fontWeight: 'bold',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         textDecoration: 'underline',
-        width: '4.35cm'
+        width: '4.35cm',
+        '@media print': {
+          fontSize: '2.5em',
+          top: '3cm'
+        }
       }}>
         تكليف بمهمة
       </Typography>
@@ -44,7 +71,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '5cm',
         left: '1cm',
         fontSize: '2.3em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif'
       }}>
         منطقة الجزائر
       </Typography>
@@ -53,7 +80,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '5cm',
         right: '1cm',
         fontSize: '2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif'
       }}>
         {mission.code_mission || 'N/A'}
       </Typography>
@@ -76,7 +103,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '5.8cm',
         left: '1cm',
         fontSize: '2.3em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif'
       }}>
         ولاية المدية
       </Typography>
@@ -87,7 +114,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '8cm',
         left: '1cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif'
       }}>
         اللقب
       </Typography>
@@ -96,7 +123,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '10cm',
         left: '1cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif'
       }}>
         الاسم
       </Typography>
@@ -105,7 +132,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '12cm',
         left: '1cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif'
       }}>
         التعيين
       </Typography>
@@ -114,7 +141,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '14cm',
         left: '1cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif'
       }}>
         المهنة
       </Typography>
@@ -123,7 +150,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '16cm',
         left: '1cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif'
       }}>
         سبب التنقل
       </Typography>
@@ -132,7 +159,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '18cm',
         left: '1cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif'
       }}>
         تاريخ الانطلاق
       </Typography>
@@ -141,7 +168,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '20cm',
         left: '1cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif'
       }}>
         تاريخ الرجوع
       </Typography>
@@ -150,7 +177,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '22cm',
         left: '1cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif'
       }}>
         وسيلة النقل
       </Typography>
@@ -159,7 +186,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '24cm',
         left: '1cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif'
       }}>
         يسافر الى
       </Typography>
@@ -171,7 +198,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         left: '50%',
         transform: 'translateX(-50%)',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         minWidth: '8cm',
         textAlign: 'center'
       }}>
@@ -182,7 +209,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '8cm',
         left: '4cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         width: '3cm'
       }}>
         ....................
@@ -192,7 +219,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '8cm',
         right: '4cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         width: '3cm',
         textAlign: 'right'
       }}>
@@ -204,7 +231,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         left: '50%',
         transform: 'translateX(-50%)',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         minWidth: '8cm',
         textAlign: 'center'
       }}>
@@ -215,7 +242,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '10cm',
         left: '4cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         width: '3cm'
       }}>
         ....................
@@ -225,7 +252,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '10cm',
         right: '4cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         width: '3cm',
         textAlign: 'right'
       }}>
@@ -237,7 +264,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         left: '50%',
         transform: 'translateX(-50%)',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         minWidth: '8cm',
         textAlign: 'center'
       }}>
@@ -248,7 +275,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '12cm',
         left: '4cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         width: '3cm'
       }}>
         ....................
@@ -258,7 +285,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '12cm',
         right: '4cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         width: '3cm',
         textAlign: 'right'
       }}>
@@ -270,7 +297,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         left: '50%',
         transform: 'translateX(-50%)',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         minWidth: '8cm',
         textAlign: 'center'
       }}>
@@ -281,7 +308,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '14cm',
         left: '4cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         width: '3cm'
       }}>
         ....................
@@ -291,7 +318,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '14cm',
         right: '4cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         width: '3cm',
         textAlign: 'right'
       }}>
@@ -303,7 +330,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         left: '50%',
         transform: 'translateX(-50%)',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         minWidth: '8cm',
         textAlign: 'center'
       }}>
@@ -314,7 +341,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '16cm',
         left: '4cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         width: '3cm'
       }}>
         ....................
@@ -324,7 +351,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '16cm',
         right: '4cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         width: '3cm',
         textAlign: 'right'
       }}>
@@ -336,7 +363,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         left: '50%',
         transform: 'translateX(-50%)',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         minWidth: '8cm',
         textAlign: 'center'
       }}>
@@ -347,7 +374,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '18cm',
         left: '4cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         width: '3cm'
       }}>
         ....................
@@ -357,7 +384,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '18cm',
         right: '4cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         width: '3cm',
         textAlign: 'right'
       }}>
@@ -369,7 +396,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         left: '50%',
         transform: 'translateX(-50%)',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         minWidth: '8cm',
         textAlign: 'center'
       }}>
@@ -380,7 +407,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '20cm',
         left: '4cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         width: '3cm'
       }}>
         ....................
@@ -390,7 +417,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '20cm',
         right: '4cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         width: '3cm',
         textAlign: 'right'
       }}>
@@ -402,7 +429,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         left: '50%',
         transform: 'translateX(-50%)',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         minWidth: '8cm',
         textAlign: 'center'
       }}>
@@ -413,7 +440,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '22cm',
         left: '4cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         width: '3cm'
       }}>
         ....................
@@ -423,7 +450,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '22cm',
         right: '4cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         width: '3cm',
         textAlign: 'right'
       }}>
@@ -435,7 +462,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         left: '50%',
         transform: 'translateX(-50%)',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         minWidth: '8cm',
         textAlign: 'center'
       }}>
@@ -446,7 +473,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '24cm',
         left: '4cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         width: '3cm'
       }}>
         ....................
@@ -456,7 +483,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         top: '24cm',
         right: '4cm',
         fontSize: '2.2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif',
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
         width: '3cm',
         textAlign: 'right'
       }}>
@@ -469,7 +496,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         bottom: '2cm',
         right: '2cm',
         fontSize: '2em',
-        fontFamily: '"Noto Naskh Arabic", "Arabic Typesetting", Arial, sans-serif'
+        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif'
       }}>
         المدية : {new Date().toLocaleDateString('fr-FR')}
       </Typography>

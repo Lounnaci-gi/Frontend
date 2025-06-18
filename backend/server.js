@@ -91,10 +91,7 @@ async function startServer() {
     }
 
     console.log('Tentative de connexion à MongoDB...');
-    await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    });
+    await mongoose.connect(process.env.MONGODB_URI);
     console.log('Connecté à MongoDB avec succès');
 
     // Initialiser l'admin après la connexion à MongoDB

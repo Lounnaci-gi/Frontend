@@ -32,12 +32,6 @@ transportSchema.pre('save', function(next) {
     next();
 });
 
-// Index pour éviter les doublons (insensible à la casse)
-transportSchema.index({ nom: 1 }, { 
-    unique: true,
-    collation: { locale: 'fr', strength: 2 }
-});
-
 const Transport = mongoose.model('Transport', transportSchema);
 
 module.exports = Transport; 
