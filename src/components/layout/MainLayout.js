@@ -8,7 +8,7 @@ import Footer from './Footer';
 
 // Removed the 'Main' styled component
 
-const MainLayout = ({ children }) => {
+const MainLayout = ({ children, toggleDarkMode, darkMode }) => {
   // We still keep isMobile for potential responsive adjustments in the Header/Navbar
   const isMobile = useMediaQuery('(max-width:600px)');
 
@@ -18,7 +18,7 @@ const MainLayout = ({ children }) => {
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', direction: 'rtl' }}>
       <CssBaseline />
       {/* Header component will now act as the Navbar */}
-      <Header isMobile={isMobile} /> 
+      <Header isMobile={isMobile} toggleDarkMode={toggleDarkMode} darkMode={darkMode} />
 
       {/* Add a Toolbar spacer to prevent content from being hidden by the fixed AppBar */}
       <Toolbar />

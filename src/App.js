@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useState, useMemo, useEffect } from 'react';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import { CacheProvider } from '@emotion/react';
 import createCache from '@emotion/cache';
@@ -13,6 +13,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './config/queryClient';
 import { AppErrorBoundary } from './components/ErrorBoundary';
 import { Toast } from './components/Toast';
+import Brightness7Icon from '@mui/icons-material/Brightness7';
 
 // Composants chargés paresseusement
 const MainLayout = lazy(() => import('./components/layout/MainLayout'));
@@ -26,29 +27,6 @@ const Settings = lazy(() => import('./components/settings/Settings'));
 const cacheRtl = createCache({
   key: 'muirtl',
   stylisPlugins: [prefixer, rtlPlugin],
-});
-
-// Création du thème avec support RTL
-const theme = createTheme({
-  direction: 'rtl',
-  typography: {
-    fontFamily: 'Cairo, sans-serif',
-  },
-  palette: {
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-  },
-  components: {
-    MuiTextField: {
-      defaultProps: {
-        dir: 'rtl',
-      },
-    },
-  },
 });
 
 // Composant de protection des routes
@@ -70,9 +48,51 @@ const LoadingFallback = () => (
   </div>
 );
 
-// Configuration du routeur avec les drapeaux de fonctionnalités futures
-const router = createBrowserRouter(
-  [
+function App() {
+  // Gestion du thème sombre
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('darkMode');
+    return saved ? JSON.parse(saved) : false;
+  });
+
+  useEffect(() => {
+    document.body.classList.toggle('dark-theme', darkMode);
+    localStorage.setItem('darkMode', JSON.stringify(darkMode));
+  }, [darkMode]);
+
+  const theme = useMemo(() => createTheme({
+    direction: 'rtl',
+    typography: {
+      fontFamily: 'Cairo, sans-serif',
+    },
+    palette: {
+      mode: darkMode ? 'dark' : 'light',
+      primary: {
+        main: '#1976d2',
+      },
+      secondary: {
+        main: '#dc004e',
+      },
+      background: {
+        default: darkMode ? '#181818' : '#fff',
+        paper: darkMode ? '#232323' : '#fff',
+      },
+      text: {
+        primary: darkMode ? '#f5f5f5' : '#222',
+      },
+    },
+    components: {
+      MuiTextField: {
+        defaultProps: {
+          dir: 'rtl',
+        },
+      },
+    },
+  }), [darkMode]);
+
+  const toggleDarkMode = () => setDarkMode((prev) => !prev);
+
+  const router = createBrowserRouter([
     {
       path: "/login",
       element: (
@@ -86,7 +106,7 @@ const router = createBrowserRouter(
       element: (
         <ProtectedRoute>
           <Suspense fallback={<LoadingFallback />}>
-            <MainLayout>
+            <MainLayout toggleDarkMode={toggleDarkMode} darkMode={darkMode}>
               <Dashboard />
             </MainLayout>
           </Suspense>
@@ -98,7 +118,7 @@ const router = createBrowserRouter(
       element: (
         <ProtectedRoute>
           <Suspense fallback={<LoadingFallback />}>
-            <MainLayout>
+            <MainLayout toggleDarkMode={toggleDarkMode} darkMode={darkMode}>
               <Dashboard />
             </MainLayout>
           </Suspense>
@@ -110,7 +130,7 @@ const router = createBrowserRouter(
       element: (
         <ProtectedRoute>
           <Suspense fallback={<LoadingFallback />}>
-            <MainLayout>
+            <MainLayout toggleDarkMode={toggleDarkMode} darkMode={darkMode}>
               <Employees />
             </MainLayout>
           </Suspense>
@@ -122,7 +142,7 @@ const router = createBrowserRouter(
       element: (
         <ProtectedRoute>
           <Suspense fallback={<LoadingFallback />}>
-            <MainLayout>
+            <MainLayout toggleDarkMode={toggleDarkMode} darkMode={darkMode}>
               <Missions />
             </MainLayout>
           </Suspense>
@@ -134,38 +154,22 @@ const router = createBrowserRouter(
       element: (
         <ProtectedRoute>
           <Suspense fallback={<LoadingFallback />}>
-            <MainLayout>
+            <MainLayout toggleDarkMode={toggleDarkMode} darkMode={darkMode}>
               <Settings />
             </MainLayout>
           </Suspense>
         </ProtectedRoute>
       )
     }
-  ],
-  {
+  ], {
     future: {
       v7_startTransition: true,
       v7_relativeSplatPath: true
     },
     basename: process.env.PUBLIC_URL || '/',
     window: window
-  }
-);
+  });
 
-// Envelopper le routeur avec un composant qui force les drapeaux de fonctionnalités futures
-const RouterWithFutureFlags = () => {
-  React.useEffect(() => {
-    // Forcer l'activation des drapeaux de fonctionnalités futures
-    if (window.__reactRouterFutureFlags) {
-      window.__reactRouterFutureFlags.v7_startTransition = true;
-      window.__reactRouterFutureFlags.v7_relativeSplatPath = true;
-    }
-  }, []);
-
-  return <RouterProvider router={router} />;
-};
-
-function App() {
   return (
     <AppErrorBoundary>
       <QueryClientProvider client={queryClient}>
@@ -173,7 +177,7 @@ function App() {
           <ThemeProvider theme={theme}>
             <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={arLocale}>
               <CssBaseline />
-              <RouterWithFutureFlags />
+              <RouterProvider router={router} />
               <Toast />
             </LocalizationProvider>
           </ThemeProvider>
