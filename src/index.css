@@ -19,9 +19,76 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background: var(--background-color);
   color: var(--text-color);
+  overflow-x: hidden; /* Empêcher le scroll horizontal */
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+/* Améliorations responsive globales */
+@media (max-width: 600px) {
+  /* Réduire la taille des textes sur mobile */
+  h1 { font-size: 1.5rem !important; }
+  h2 { font-size: 1.3rem !important; }
+  h3 { font-size: 1.1rem !important; }
+  h4 { font-size: 1rem !important; }
+  
+  /* Améliorer l'espacement sur mobile */
+  .MuiContainer-root {
+    padding-left: 8px !important;
+    padding-right: 8px !important;
+  }
+  
+  /* Optimiser les tableaux sur mobile */
+  .MuiTableContainer-root {
+    font-size: 0.875rem;
+  }
+  
+  /* Améliorer les boutons sur mobile */
+  .MuiButton-root {
+    min-height: 36px;
+    font-size: 0.875rem;
+  }
+  
+  /* Optimiser les formulaires sur mobile */
+  .MuiTextField-root {
+    margin-bottom: 16px;
+  }
+  
+  /* Améliorer les cartes sur mobile */
+  .MuiCard-root {
+    margin-bottom: 16px;
+  }
+}
+
+/* Améliorations pour les tablettes */
+@media (min-width: 601px) and (max-width: 960px) {
+  .MuiContainer-root {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+}
+
+/* Améliorations pour les écrans larges */
+@media (min-width: 1200px) {
+  .MuiContainer-root {
+    max-width: 1400px !important;
+  }
+}
+
+/* Améliorations pour l'impression */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  
+  .MuiAppBar-root,
+  .MuiDrawer-root,
+  .MuiFab-root,
+  .no-print {
+    display: none !important;
+  }
 }

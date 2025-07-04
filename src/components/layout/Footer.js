@@ -6,7 +6,7 @@ const Footer = () => {
     <Box 
       component="footer"
       sx={{
-        p: 3,
+        p: { xs: 2, md: 3 }, // Padding responsive
         mt: 'auto', // Push the footer to the bottom
         bgcolor: '#f0f0f0',
         textAlign: 'center',
@@ -20,7 +20,14 @@ const Footer = () => {
         © {new Date().getFullYear()} نظام إدارة الموظفين. جميع الحقوق محفوظة.
       </Typography>
       <Divider sx={{ my: 1 }} />
-      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        gap: { xs: 1, md: 2 }, 
+        flexWrap: 'wrap',
+        flexDirection: { xs: 'column', sm: 'row' },
+        alignItems: 'center'
+      }}>
         <Link href="#" color="text.secondary" underline="hover" variant="body2">
           سياسة الخصوصية
         </Link>

@@ -534,9 +534,11 @@ const Employees = () => {
 
         <TableContainer sx={{ 
           width: '100%',
+          overflowX: 'auto',
           '& .MuiTable-root': {
             width: '100%',
             tableLayout: 'fixed',
+            minWidth: { xs: 800, md: 'auto' }
           },
           '& .MuiTableCell-root': {
             whiteSpace: 'nowrap',
@@ -548,16 +550,38 @@ const Employees = () => {
           <Table stickyHeader>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ width: '12%', minWidth: '150px' }}>الإجراءات</TableCell>
-                <TableCell sx={{ width: '7%' }}>الحالة</TableCell>
-                <TableCell sx={{ width: '8%' }}>تاريخ التوظيف</TableCell>
-                <TableCell sx={{ width: '10%' }}>النعيين</TableCell>
-                <TableCell sx={{ width: '10%' }}>الوظيفة</TableCell>
+                <TableCell sx={{ 
+                  width: '12%', 
+                  minWidth: { xs: '80px', md: '150px' },
+                  display: { xs: 'table-cell', md: 'table-cell' }
+                }}>الإجراءات</TableCell>
+                <TableCell sx={{ 
+                  width: '7%',
+                  display: { xs: 'none', lg: 'table-cell' }
+                }}>الحالة</TableCell>
+                <TableCell sx={{ 
+                  width: '8%',
+                  display: { xs: 'none', md: 'table-cell' }
+                }}>تاريخ التوظيف</TableCell>
+                <TableCell sx={{ 
+                  width: '10%',
+                  display: { xs: 'none', sm: 'table-cell' }
+                }}>النعيين</TableCell>
+                <TableCell sx={{ 
+                  width: '10%',
+                  display: { xs: 'none', sm: 'table-cell' }
+                }}>الوظيفة</TableCell>
                 <TableCell sx={{ width: '6%' }}>الجنس</TableCell>
-                <TableCell sx={{ width: '8%' }}>تاريخ الميلاد</TableCell>
+                <TableCell sx={{ 
+                  width: '8%',
+                  display: { xs: 'none', md: 'table-cell' }
+                }}>تاريخ الميلاد</TableCell>
                 <TableCell sx={{ width: '12%' }}>الاسم</TableCell>
                 <TableCell sx={{ width: '12%' }}>اللقب</TableCell>
-                <TableCell sx={{ width: '8%' }}>الرقم الوظيفي</TableCell>
+                <TableCell sx={{ 
+                  width: '8%',
+                  display: { xs: 'none', sm: 'table-cell' }
+                }}>الرقم الوظيفي</TableCell>
                 <TableCell sx={{ width: '6%' }}>الصورة</TableCell>
               </TableRow>
             </TableHead>

@@ -30,9 +30,9 @@ const MainLayout = ({ children, toggleDarkMode, darkMode }) => {
           flexGrow: 1,
           display: 'flex',
           flexDirection: 'column',
-          p: '16px', // Réduit le padding
+          p: { xs: '12px', sm: '16px', md: '20px' }, // Padding responsive
           boxSizing: 'border-box',
-          maxWidth: '1600px', // Augmenté de 1200px à 1600px
+          maxWidth: { xs: '100%', md: '1600px' }, // Largeur responsive
           margin: '0 auto',
           width: '100%',
         }}

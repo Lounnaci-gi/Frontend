@@ -1389,63 +1389,44 @@ const Missions = () => {
   };
 
   const handlePrintMonthlyMission = async (mission) => {
+    // --- Version finale compatible tous navigateurs ---
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Veuillez autoriser les popups pour l\'impression');
+      return;
+    }
     try {
-      // Vérifier si le transport est déjà peuplé
       let transport = mission.transportMode;
-      
-      // Si le transport n'est pas peuplé (ancien format), le récupérer
       if (!transport || typeof transport === 'string') {
         try {
-          // Essayer d'abord de récupérer le transport par ID
           const transportResponse = await axiosInstance.get(`/transports/${mission.transportMode}`);
           transport = transportResponse.data;
         } catch (error) {
-          console.error('Erreur lors de la récupération du transport par ID:', error);
-          // Si la recherche par ID échoue, récupérer tous les transports et chercher par ID
           try {
             const transportsResponse = await axiosInstance.get('/transports');
             transport = transportsResponse.data.find(t => t._id === mission.transportMode);
           } catch (fallbackError) {
-            console.error('Erreur lors de la récupération de tous les transports:', fallbackError);
             throw new Error('Impossible de récupérer les détails du transport');
           }
         }
       }
-
       if (!transport) {
-        console.error('Transport non trouvé pour l\'ID:', mission.transportMode);
         throw new Error('Impossible de récupérer les détails du transport');
       }
-
-      // Récupérer les détails des destinations
       const destinations = await Promise.all(
         mission.destinations.map(async (destId) => {
           try {
             const response = await axiosInstance.get(`/locations/${destId}`);
             return response.data;
           } catch (error) {
-            console.error('Erreur lors de la récupération de la destination:', error);
             return null;
           }
         })
       );
-
-      // Récupérer les détails de l'employé
       const employeeResponse = await axiosInstance.get(`/employees/${mission.employee}`);
       const employee = employeeResponse.data;
-
-      // Créer une nouvelle fenêtre pour l'impression
-      const printWindow = window.open('data:text/html;charset=utf-8,', '_blank');
-      if (!printWindow) {
-        alert('Veuillez autoriser les popups pour l\'impression');
-        return;
-      }
-
-      // Formater les dates
       const startDate = new Date(mission.startDate).toLocaleDateString('ar-SA');
       const endDate = new Date(mission.endDate).toLocaleDateString('ar-SA');
-
-      // Créer le contenu HTML
       const content = `
         <!DOCTYPE html>
         <html dir="rtl" lang="ar">
@@ -1453,74 +1434,20 @@ const Missions = () => {
           <meta charset="UTF-8">
           <title></title>
           <style>
-            @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
-            body {
-              font-family: 'Cairo', sans-serif;
-              margin: 0;
-              padding: 20px;
-              background-color: white;
-            }
-            .container {
-              max-width: 800px;
-              margin: 0 auto;
-              padding: 20px;
-              border: 1px solid #ccc;
-            }
-            .header {
-              text-align: center;
-              margin-bottom: 30px;
-            }
-            .header h1 {
-              margin: 0;
-              color: #333;
-            }
-            .info-section {
-              margin-bottom: 20px;
-            }
-            .info-section h2 {
-              color: #2c3e50;
-              border-bottom: 2px solid #3498db;
-              padding-bottom: 5px;
-              margin-bottom: 15px;
-            }
-            .info-grid {
-              display: grid;
-              grid-template-columns: repeat(2, 1fr);
-              gap: 15px;
-            }
-            .info-item {
-              margin-bottom: 10px;
-            }
-            .info-item strong {
-              color: #2c3e50;
-              display: inline-block;
-              width: 150px;
-            }
-            .destinations {
-              margin-top: 20px;
-            }
-            .destination-item {
-              background-color: #f8f9fa;
-              padding: 10px;
-              margin-bottom: 10px;
-              border-radius: 5px;
-            }
-            .footer {
-              margin-top: 30px;
-              text-align: center;
-              color: #666;
-            }
-            @media print {
-              body {
-                padding: 0;
-              }
-              .container {
-                border: none;
-              }
-              .no-print {
-                display: none;
-              }
-            }
+            @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700&display=swap');
+            body { font-family: 'Cairo', sans-serif; margin: 0; padding: 20px; background-color: white; }
+            .container { max-width: 800px; margin: 0 auto; padding: 20px; border: 1px solid #ccc; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .header h1 { margin: 0; color: #333; }
+            .info-section { margin-bottom: 20px; }
+            .info-section h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 5px; margin-bottom: 15px; }
+            .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+            .info-item { margin-bottom: 10px; }
+            .info-item strong { color: #2c3e50; display: inline-block; width: 150px; }
+            .destinations { margin-top: 20px; }
+            .destination-item { background-color: #f8f9fa; padding: 10px; margin-bottom: 10px; border-radius: 5px; }
+            .footer { margin-top: 30px; text-align: center; color: #666; }
+            @media print { body { padding: 0; } .container { border: none; } .no-print { display: none; } }
           </style>
         </head>
         <body>
@@ -1528,77 +1455,37 @@ const Missions = () => {
             <div class="header">
               <h1>مهمة شهرية</h1>
             </div>
-            
             <div class="info-section">
               <h2>معلومات المهمة</h2>
               <div class="info-grid">
-                <div class="info-item">
-                  <strong>رقم المهمة:</strong>
-                  <span>${mission.code_mission || mission.code}</span>
-                </div>
-                <div class="info-item">
-                  <strong>تاريخ البداية:</strong>
-                  <span>${startDate}</span>
-                </div>
-                <div class="info-item">
-                  <strong>تاريخ النهاية:</strong>
-                  <span>${endDate}</span>
-                </div>
-                <div class="info-item">
-                  <strong>وسيلة النقل:</strong>
-                  <span>${transport.nom}</span>
-                </div>
+                <div class="info-item"><strong>رقم المهمة:</strong><span>${mission.code_mission || mission.code}</span></div>
+                <div class="info-item"><strong>تاريخ البداية:</strong><span>${startDate}</span></div>
+                <div class="info-item"><strong>تاريخ النهاية:</strong><span>${endDate}</span></div>
+                <div class="info-item"><strong>وسيلة النقل:</strong><span>${transport.nom}</span></div>
               </div>
             </div>
-
             <div class="info-section">
               <h2>معلومات الموظف</h2>
               <div class="info-grid">
-                <div class="info-item">
-                  <strong>الاسم:</strong>
-                  <span>${employee.nom} ${employee.prenom}</span>
-                </div>
-                <div class="info-item">
-                  <strong>الرقم الوظيفي:</strong>
-                  <span>${employee.matricule}</span>
-                </div>
-                <div class="info-item">
-                  <strong>الوظيفة:</strong>
-                  <span>${employee.fonction}</span>
-                </div>
-                <div class="info-item">
-                  <strong>القسم:</strong>
-                  <span>${employee.departement}</span>
-                </div>
+                <div class="info-item"><strong>الاسم:</strong><span>${employee.nom} ${employee.prenom}</span></div>
+                <div class="info-item"><strong>الرقم الوظيفي:</strong><span>${employee.matricule}</span></div>
+                <div class="info-item"><strong>الوظيفة:</strong><span>${employee.fonction}</span></div>
+                <div class="info-item"><strong>القسم:</strong><span>${employee.departement}</span></div>
               </div>
             </div>
-
             <div class="info-section">
               <h2>الوجهات</h2>
               <div class="destinations">
                 ${destinations.filter(dest => dest).map(dest => `
                   <div class="destination-item">
-                    <div class="info-item">
-                      <strong>الاسم:</strong>
-                      <span>${dest.name}</span>
-                    </div>
-                    <div class="info-item">
-                      <strong>العنوان:</strong>
-                      <span>${dest.address}</span>
-                    </div>
-                    <div class="info-item">
-                      <strong>المدينة:</strong>
-                      <span>${dest.city}</span>
-                    </div>
-                    <div class="info-item">
-                      <strong>البلد:</strong>
-                      <span>${dest.country}</span>
-                    </div>
+                    <div class="info-item"><strong>الاسم:</strong><span>${dest.name}</span></div>
+                    <div class="info-item"><strong>العنوان:</strong><span>${dest.address}</span></div>
+                    <div class="info-item"><strong>المدينة:</strong><span>${dest.city}</span></div>
+                    <div class="info-item"><strong>البلد:</strong><span>${dest.country}</span></div>
                   </div>
                 `).join('')}
               </div>
             </div>
-
             <div class="footer">
               <p>تم إنشاء هذه الوثيقة في ${new Date().toLocaleDateString('ar-SA')}</p>
             </div>
@@ -1606,20 +1493,21 @@ const Missions = () => {
         </body>
         </html>
       `;
-
-      // Écrire le contenu dans la fenêtre et imprimer
       printWindow.document.write(content);
       printWindow.document.close();
-      
-      // Attendre que le contenu soit chargé avant d'imprimer
       printWindow.onload = () => {
         printWindow.print();
-        printWindow.close();
+        // Fermeture automatique après impression si supporté
+        if ('onafterprint' in printWindow) {
+          printWindow.onafterprint = () => {
+            printWindow.close();
+          };
+        }
+        // Sinon, la fenêtre reste ouverte pour l'utilisateur
       };
-
     } catch (error) {
-      console.error('Erreur lors de l\'impression:', error);
       alert(`Erreur lors de l'impression: ${error.message}`);
+      printWindow.close();
     }
   };
 
@@ -1979,25 +1867,53 @@ const Missions = () => {
                   </Box>
                 </Paper>
 
-                <TableContainer component={Paper}>
+                <TableContainer component={Paper} sx={{ 
+                  overflowX: 'auto',
+                  '& .MuiTable-root': {
+                    minWidth: { xs: 800, md: 'auto' }
+                  }
+                }}>
                   <Table>
                     <TableHead>
                       <TableRow>
-                        <TableCell align="right" sx={{ fontWeight: 'bold', width: '120px' }}>الإجراءات</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>الهاتف</TableCell>
+                        <TableCell align="right" sx={{ 
+                          fontWeight: 'bold', 
+                          width: { xs: '80px', md: '120px' },
+                          minWidth: { xs: '80px', md: '120px' }
+                        }}>الإجراءات</TableCell>
+                        <TableCell align="right" sx={{ 
+                          fontWeight: 'bold',
+                          display: { xs: 'none', lg: 'table-cell' }
+                        }}>الهاتف</TableCell>
                         <TableCell align="right" sx={{ fontWeight: 'bold' }}>النوع</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>تاريخ الانتهاء</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>تاريخ البدء</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>الوجهة</TableCell>
+                        <TableCell align="right" sx={{ 
+                          fontWeight: 'bold',
+                          display: { xs: 'none', md: 'table-cell' }
+                        }}>تاريخ الانتهاء</TableCell>
+                        <TableCell align="right" sx={{ 
+                          fontWeight: 'bold',
+                          display: { xs: 'none', md: 'table-cell' }
+                        }}>تاريخ البدء</TableCell>
+                        <TableCell align="right" sx={{ 
+                          fontWeight: 'bold',
+                          display: { xs: 'none', lg: 'table-cell' }
+                        }}>الوجهة</TableCell>
                         <TableCell align="right" sx={{ fontWeight: 'bold' }}>المركز</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>الوظيفة</TableCell>
+                        <TableCell align="right" sx={{ 
+                          fontWeight: 'bold',
+                          display: { xs: 'none', sm: 'table-cell' }
+                        }}>الوظيفة</TableCell>
                         <TableCell align="right" sx={{ fontWeight: 'bold' }}>الاسم</TableCell>
                         <TableCell align="right" sx={{ fontWeight: 'bold' }}>اللقب</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 'bold' }}>رمز الموظف</TableCell>
+                        <TableCell align="right" sx={{ 
+                          fontWeight: 'bold',
+                          display: { xs: 'none', sm: 'table-cell' }
+                        }}>رمز الموظف</TableCell>
                         <TableCell 
                           align="right" 
                           onClick={() => handleSort('code_mission')}
                           style={{ cursor: 'pointer' }}
+                          sx={{ fontWeight: 'bold' }}
                         >
                           رمز المهمة {sortConfig.key === 'code_mission' && (
                           <span>{sortConfig.direction === 'asc' ? ' ↑' : ' ↓'}</span>
@@ -2010,8 +1926,16 @@ const Missions = () => {
                         .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
                         .map((mission) => (
                           <TableRow key={mission._id}>
-                            <TableCell align="right">
-                              <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                            <TableCell align="right" sx={{ 
+                              width: { xs: '80px', md: '120px' },
+                              minWidth: { xs: '80px', md: '120px' }
+                            }}>
+                              <Box sx={{ 
+                                display: 'flex', 
+                                gap: { xs: 0.5, md: 1 }, 
+                                justifyContent: 'flex-end',
+                                flexDirection: { xs: 'column', sm: 'row' }
+                              }}>
                                 <Tooltip title="طباعة">
                                   <IconButton 
                                     size="small" 

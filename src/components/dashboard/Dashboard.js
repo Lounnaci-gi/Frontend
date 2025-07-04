@@ -219,7 +219,7 @@ const Dashboard = () => {
       alignItems: 'flex-end'
     }}>
       {/* Statistiques */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+      <Grid container spacing={{ xs: 2, md: 3 }} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
           <StatCard
             title="إجمالي الموظفين"
@@ -231,7 +231,13 @@ const Dashboard = () => {
                 <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'right' }}>
                   عدد الموظفين المسجلين في النظام
                 </Typography>
-                <Box sx={{ display: 'flex', gap: 2, mt: 0.5, flexDirection: 'row-reverse' }}>
+                <Box sx={{ 
+                  display: 'flex', 
+                  gap: 2, 
+                  mt: 0.5, 
+                  flexDirection: { xs: 'column', sm: 'row-reverse' },
+                  alignItems: { xs: 'flex-start', sm: 'center' }
+                }}>
                   <Typography variant="body1" sx={{ color: 'primary.main', fontWeight: 'bold', textAlign: 'right' }}>
                     الذكور %{genderPercentages.male}
                   </Typography>
