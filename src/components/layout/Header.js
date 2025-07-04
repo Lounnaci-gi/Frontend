@@ -141,12 +141,18 @@ const Header = ({ isMobile, toggleDarkMode, darkMode }) => {
             <Avatar
               src="/image.png"
               alt="الجزائرية للمياه"
+              className="logo"
               sx={{ 
-                width: { xs: 40, md: 50 }, 
-                height: { xs: 40, md: 50 },
+                width: { xs: 32, md: 40 }, 
+                height: { xs: 32, md: 40 },
                 cursor: 'pointer',
                 marginRight: 'auto',
-                marginLeft: 2
+                marginLeft: 2,
+                transition: 'filter 0.3s, box-shadow 0.3s',
+                '&:hover': {
+                  filter: 'brightness(1.2)',
+                  boxShadow: '0 0 10px 2px rgba(0,0,0,0.15)',
+                }
               }}
               onClick={() => navigate('/dashboard')}
             />

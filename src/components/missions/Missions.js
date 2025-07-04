@@ -69,6 +69,7 @@ import { ar } from 'date-fns/locale';
 import { useReactToPrint } from 'react-to-print';
 import MissionPrint from './MissionPrint';
 import ReactDOM from 'react-dom';
+import ReactDOMServer from 'react-dom/server';
 
 // Importation dynamique de MonthPicker pour éviter les dépendances circulaires
 const MonthPicker = React.lazy(() => import('./MonthPicker'));
@@ -1519,8 +1520,6 @@ const Missions = () => {
     }
 
     try {
-      console.log('Début de l\'impression des missions. Nombre de missions:', filteredMissions.length);
-      
       // Préparer les données pour toutes les missions
       const missionsData = await Promise.all(
         filteredMissions.map(async (mission) => {
@@ -1608,69 +1607,50 @@ const Missions = () => {
         })
       );
 
-      // Filtrer les missions avec des données valides
       const validMissionsData = missionsData.filter(data => data !== null);
-      console.log('Nombre de missions valides:', validMissionsData.length);
-
       if (validMissionsData.length === 0) {
         alert('Aucune mission valide à imprimer');
         return;
       }
 
-      // Ouvrir le dialogue d'impression
-      setPrintDialogOpen(true);
-      setSelectedMission(validMissionsData[0]); // Sélectionner la première mission pour l'aperçu
-      console.log('Première mission sélectionnée pour l\'aperçu:', validMissionsData[0].code_mission);
-
-      // Fonction pour imprimer toutes les missions
-      const printAllMissions = async () => {
-        console.log('Début de l\'impression de toutes les missions');
-        for (let i = 0; i < validMissionsData.length; i++) {
-          console.log(`Impression de la mission ${i + 1}/${validMissionsData.length}`);
-          setSelectedMission(validMissionsData[i]);
-          
-          // Attendre que le composant soit mis à jour
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // Créer une nouvelle fenêtre d'impression pour chaque mission
-          const printWindow = window.open('data:text/html;charset=utf-8,', '_blank');
-          if (!printWindow) {
-            alert('Veuillez autoriser les popups pour l\'impression');
-            return;
-          }
-
-          // Rendre le composant d'impression
-          const printContent = ReactDOM.render(
-            <MissionPrint mission={validMissionsData[i]} ref={printRef} />,
-            printWindow.document.body
-          );
-
-          // Attendre que le contenu soit chargé
-          await new Promise(resolve => setTimeout(resolve, 500));
-
-          // Imprimer
-          printWindow.print();
-          
-          // Fermer la fenêtre après l'impression
-          printWindow.close();
-
-          // Attendre un peu entre chaque impression
-          if (i < validMissionsData.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
-        }
-        console.log('Fin de l\'impression de toutes les missions');
-        setPrintDialogOpen(false);
-      };
-
-      // Modifier le bouton d'impression dans le dialogue
-      const printButton = document.querySelector('.MuiDialogActions-root button:last-child');
-      if (printButton) {
-        printButton.onclick = printAllMissions;
-        console.log('Bouton d\'impression modifié pour imprimer toutes les missions');
-      } else {
-        console.error('Bouton d\'impression non trouvé dans le dialogue');
+      // Générer le HTML de toutes les missions avec saut de page
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        alert('Veuillez autoriser les popups pour l\'impression');
+        return;
       }
+
+      // Générer le contenu HTML
+      let content = `
+        <html>
+        <head>
+          <title>طباعة جميع المهام</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
+            body { font-family: 'Cairo', Arial, sans-serif; margin: 0; background: white; }
+            .print-mission { page-break-after: always; break-after: page; }
+            .print-mission:last-child { page-break-after: auto; break-after: auto; }
+          </style>
+        </head>
+        <body>
+      `;
+
+      // Utiliser ReactDOMServer pour rendre chaque MissionPrint en HTML statique
+      validMissionsData.forEach((missionData, idx) => {
+        content += `<div class="print-mission">`;
+        content += ReactDOMServer.renderToStaticMarkup(
+          <MissionPrint mission={missionData} />
+        );
+        content += `</div>`;
+      });
+
+      content += '</body></html>';
+      printWindow.document.write(content);
+      printWindow.document.close();
+      printWindow.onload = () => {
+        printWindow.print();
+        printWindow.close();
+      };
     } catch (error) {
       console.error('Erreur lors de l\'impression groupée:', error);
       alert(`Erreur lors de l'impression: ${error.message}`);

@@ -21,7 +21,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
       width: '210mm',
       margin: '0 auto',
       backgroundColor: 'white',
-      fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
+      fontFamily: 'Cairo, Arial, sans-serif',
       direction: 'rtl',
       '@media print': {
         p: 0,
@@ -33,7 +33,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
       {/* Import de la police Google Fonts */}
       <style>
         {`
-          @import url('https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;700&display=swap');
+          @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
           @media print {
             @page {
               size: A4;
@@ -43,6 +43,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
               margin: 0;
               -webkit-print-color-adjust: exact;
               color-adjust: exact;
+              font-family: 'Cairo', Arial, sans-serif !important;
             }
           }
         `}
