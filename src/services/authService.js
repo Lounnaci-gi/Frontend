@@ -23,6 +23,24 @@ const authService = {
         throw new Error('Token non reçu du serveur');
       }
     } catch (error) {
+      console.log('Erreur dans authService:', error);
+      
+      // Si l'erreur contient remainingSeconds, c'est une erreur 429
+      if (error.remainingSeconds !== undefined) {
+        console.log('Erreur 429 détectée avec remainingSeconds:', error.remainingSeconds);
+        // Créer une erreur avec la structure attendue par le frontend
+        const customError = new Error(error.message || 'Trop de tentatives. Réessayez plus tard.');
+        customError.response = {
+          status: 429,
+          data: {
+            message: error.message || 'Trop de tentatives. Réessayez plus tard.',
+            remainingSeconds: error.remainingSeconds
+          }
+        };
+        throw customError;
+      }
+      
+      // Pour les autres erreurs, propager directement
       throw error;
     }
   },
@@ -43,6 +61,21 @@ const authService = {
   isAuthenticated: () => {
     const user = authService.getCurrentUser();
     return !!user && !!user.token;
+  },
+
+  checkBlockStatus: async () => {
+    try {
+      const response = await axiosInstance.get('/auth/check-block');
+      return response.data;
+    } catch (error) {
+      if (error.response && error.response.status === 429) {
+        return {
+          blocked: true,
+          remainingSeconds: error.response.data?.remainingSeconds || 15 * 60
+        };
+      }
+      throw error;
+    }
   }
 };
 

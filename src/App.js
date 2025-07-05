@@ -14,6 +14,7 @@ import { queryClient } from './config/queryClient';
 import { AppErrorBoundary } from './components/ErrorBoundary';
 import { Toast } from './components/Toast';
 import Brightness7Icon from '@mui/icons-material/Brightness7';
+import useAutoLogout from './hooks/useAutoLogout';
 
 // Composants chargés paresseusement
 const MainLayout = lazy(() => import('./components/layout/MainLayout'));
@@ -32,6 +33,10 @@ const cacheRtl = createCache({
 // Composant de protection des routes
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated } = useSelector((state) => state.auth);
+  
+  // Utiliser le hook de déconnexion automatique
+  useAutoLogout(isAuthenticated ? 10 : null); // 10 minutes d'inactivité seulement si authentifié
+  
   return isAuthenticated ? children : <Navigate to="/login" />;
 };
 
