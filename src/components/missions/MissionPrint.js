@@ -45,6 +45,7 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
               color-adjust: exact;
               font-family: 'Cairo', Arial, sans-serif !important;
             }
+            canvas, svg { display: inline !important; visibility: visible !important; }
           }
         `}
       </style>
@@ -207,27 +208,6 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
       </Typography>
       <Typography variant="body1" sx={{ 
         position: 'absolute',
-        top: '8cm',
-        left: '4cm',
-        fontSize: '2.2em',
-        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
-        width: '3cm'
-      }}>
-        ....................
-      </Typography>
-      <Typography variant="body1" sx={{ 
-        position: 'absolute',
-        top: '8cm',
-        right: '4cm',
-        fontSize: '2.2em',
-        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
-        width: '3cm',
-        textAlign: 'right'
-      }}>
-        ....................
-      </Typography>
-      <Typography variant="body1" sx={{ 
-        position: 'absolute',
         top: '10cm',
         left: '50%',
         transform: 'translateX(-50%)',
@@ -237,27 +217,6 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         textAlign: 'center'
       }}>
         {employee.prenom || '________________'}
-      </Typography>
-      <Typography variant="body1" sx={{ 
-        position: 'absolute',
-        top: '10cm',
-        left: '4cm',
-        fontSize: '2.2em',
-        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
-        width: '3cm'
-      }}>
-        ....................
-      </Typography>
-      <Typography variant="body1" sx={{ 
-        position: 'absolute',
-        top: '10cm',
-        right: '4cm',
-        fontSize: '2.2em',
-        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
-        width: '3cm',
-        textAlign: 'right'
-      }}>
-        ....................
       </Typography>
       <Typography variant="body1" sx={{ 
         position: 'absolute',
@@ -273,27 +232,6 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
       </Typography>
       <Typography variant="body1" sx={{ 
         position: 'absolute',
-        top: '12cm',
-        left: '4cm',
-        fontSize: '2.2em',
-        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
-        width: '3cm'
-      }}>
-        ....................
-      </Typography>
-      <Typography variant="body1" sx={{ 
-        position: 'absolute',
-        top: '12cm',
-        right: '4cm',
-        fontSize: '2.2em',
-        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
-        width: '3cm',
-        textAlign: 'right'
-      }}>
-        ....................
-      </Typography>
-      <Typography variant="body1" sx={{ 
-        position: 'absolute',
         top: '14cm',
         left: '50%',
         transform: 'translateX(-50%)',
@@ -303,27 +241,6 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         textAlign: 'center'
       }}>
         {employee.poste || employee.fonction || '________________'}
-      </Typography>
-      <Typography variant="body1" sx={{ 
-        position: 'absolute',
-        top: '14cm',
-        left: '4cm',
-        fontSize: '2.2em',
-        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
-        width: '3cm'
-      }}>
-        ....................
-      </Typography>
-      <Typography variant="body1" sx={{ 
-        position: 'absolute',
-        top: '14cm',
-        right: '4cm',
-        fontSize: '2.2em',
-        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
-        width: '3cm',
-        textAlign: 'right'
-      }}>
-        ....................
       </Typography>
       <Typography variant="body1" sx={{ 
         position: 'absolute',
@@ -339,27 +256,6 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
       </Typography>
       <Typography variant="body1" sx={{ 
         position: 'absolute',
-        top: '16cm',
-        left: '4cm',
-        fontSize: '2.2em',
-        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
-        width: '3cm'
-      }}>
-        ....................
-      </Typography>
-      <Typography variant="body1" sx={{ 
-        position: 'absolute',
-        top: '16cm',
-        right: '4cm',
-        fontSize: '2.2em',
-        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
-        width: '3cm',
-        textAlign: 'right'
-      }}>
-        ....................
-      </Typography>
-      <Typography variant="body1" sx={{ 
-        position: 'absolute',
         top: '18cm',
         left: '50%',
         transform: 'translateX(-50%)',
@@ -369,27 +265,6 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         textAlign: 'center'
       }}>
         {mission.startDate ? new Date(mission.startDate).toLocaleDateString('fr-FR') : '________________'}
-      </Typography>
-      <Typography variant="body1" sx={{ 
-        position: 'absolute',
-        top: '18cm',
-        left: '4cm',
-        fontSize: '2.2em',
-        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
-        width: '3cm'
-      }}>
-        ....................
-      </Typography>
-      <Typography variant="body1" sx={{ 
-        position: 'absolute',
-        top: '18cm',
-        right: '4cm',
-        fontSize: '2.2em',
-        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
-        width: '3cm',
-        textAlign: 'right'
-      }}>
-        ....................
       </Typography>
       <Typography variant="body1" sx={{ 
         position: 'absolute',
@@ -405,27 +280,6 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
       </Typography>
       <Typography variant="body1" sx={{ 
         position: 'absolute',
-        top: '20cm',
-        left: '4cm',
-        fontSize: '2.2em',
-        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
-        width: '3cm'
-      }}>
-        ....................
-      </Typography>
-      <Typography variant="body1" sx={{ 
-        position: 'absolute',
-        top: '20cm',
-        right: '4cm',
-        fontSize: '2.2em',
-        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
-        width: '3cm',
-        textAlign: 'right'
-      }}>
-        ....................
-      </Typography>
-      <Typography variant="body1" sx={{ 
-        position: 'absolute',
         top: '22cm',
         left: '50%',
         transform: 'translateX(-50%)',
@@ -435,27 +289,6 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
         textAlign: 'center'
       }}>
         {mission.transportMode?.nom || '________________'}
-      </Typography>
-      <Typography variant="body1" sx={{ 
-        position: 'absolute',
-        top: '22cm',
-        left: '4cm',
-        fontSize: '2.2em',
-        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
-        width: '3cm'
-      }}>
-        ....................
-      </Typography>
-      <Typography variant="body1" sx={{ 
-        position: 'absolute',
-        top: '22cm',
-        right: '4cm',
-        fontSize: '2.2em',
-        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
-        width: '3cm',
-        textAlign: 'right'
-      }}>
-        ....................
       </Typography>
       <Typography variant="body1" sx={{ 
         position: 'absolute',
@@ -469,32 +302,11 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
       }}>
         {mission.destinations && mission.destinations.length > 0 ? mission.destinations[0].name : '________________'}
       </Typography>
-      <Typography variant="body1" sx={{ 
-        position: 'absolute',
-        top: '24cm',
-        left: '4cm',
-        fontSize: '2.2em',
-        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
-        width: '3cm'
-      }}>
-        ....................
-      </Typography>
-      <Typography variant="body1" sx={{ 
-        position: 'absolute',
-        top: '24cm',
-        right: '4cm',
-        fontSize: '2.2em',
-        fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif',
-        width: '3cm',
-        textAlign: 'right'
-      }}>
-        ....................
-      </Typography>
 
       {/* Date en bas à droite */}
       <Typography variant="body1" sx={{ 
         position: 'absolute',
-        bottom: '2cm',
+        bottom: '4cm',
         right: '2cm',
         fontSize: '2em',
         fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif'
@@ -504,5 +316,114 @@ const MissionPrint = forwardRef(({ mission }, ref) => {
     </Box>
   );
 });
+
+// Version simplifiée pour impression multiple
+export const MissionPrintSimple = ({ mission }) => {
+  const employee = mission.employee || {};
+  const qrData = JSON.stringify({
+    nom: employee.nom || '',
+    prenom: employee.prenom || '',
+    fonction: employee.fonction || employee.poste || '',
+    centre: employee.centre || '',
+    code_mission: mission.code_mission || '',
+    startDate: mission.startDate || '',
+    endDate: mission.endDate || '',
+  });
+  return (
+    <div style={{
+      width: '100%',
+      height: '297mm',
+      boxSizing: 'border-box',
+      padding: '2cm 1.5cm 1.5cm 1.5cm',
+      margin: 0,
+      background: 'white',
+      fontFamily: 'Cairo, "Arabic Typesetting", Arial, sans-serif',
+      direction: 'rtl',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'flex-start',
+      alignItems: 'center',
+      position: 'relative',
+    }}>
+      {/* En-tête */}
+      <div style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5em' }}>
+        {/* Unité/structure à droite */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', minWidth: 120 }}>
+          <div style={{ fontSize: '1.1em', fontWeight: 'bold', marginBottom: '0.2em' }}>منطقة الجزائر</div>
+          <div style={{ fontSize: '1.1em', fontWeight: 'bold' }}>وحدة المدية</div>
+        </div>
+        {/* Titre centré sur la même ligne */}
+        <div style={{ fontSize: '2em', fontWeight: 'bold', textDecoration: 'underline', fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif', flex: 1, textAlign: 'center' }}>
+          تكليف بمهمة
+        </div>
+        {/* QR code au-dessus du numéro mission à gauche */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 120 }}>
+          <QRCode value={qrData} size={60} level="M" includeMargin={true} />
+          <div style={{ fontSize: '1em', fontWeight: 'bold', marginTop: '-2cm' }}>N°: {mission.code_mission || ''}</div>
+        </div>
+      </div>
+      {/* Tableau des champs avec pointillés */}
+      <div style={{ width: '90%', margin: '0 auto', marginBottom: '2em' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '1.2em' }}>
+          <tbody>
+            <tr style={{ height: '2cm' }}>
+              <td style={{ fontWeight: 'bold', textAlign: 'right', width: '30%' }}>الاسم</td>
+              <td style={{ width: '5%' }}>:</td>
+              <td style={{ textAlign: 'center', width: '65%', borderBottom: '1px dotted #000' }}>{employee.prenom || ''}</td>
+            </tr>
+            <tr style={{ height: '2cm' }}>
+              <td style={{ fontWeight: 'bold', textAlign: 'right' }}>اللقب</td>
+              <td>:</td>
+              <td style={{ textAlign: 'center', borderBottom: '1px dotted #000' }}>{employee.nom || ''}</td>
+            </tr>
+            <tr style={{ height: '2cm' }}>
+              <td style={{ fontWeight: 'bold', textAlign: 'right' }}>التعيين</td>
+              <td>:</td>
+              <td style={{ textAlign: 'center', borderBottom: '1px dotted #000' }}>{employee.centre || ''}</td>
+            </tr>
+            <tr style={{ height: '2cm' }}>
+              <td style={{ fontWeight: 'bold', textAlign: 'right' }}>المهنة</td>
+              <td>:</td>
+              <td style={{ textAlign: 'center', borderBottom: '1px dotted #000' }}>{employee.poste || employee.fonction || ''}</td>
+            </tr>
+            <tr style={{ height: '2cm' }}>
+              <td style={{ fontWeight: 'bold', textAlign: 'right' }}>سبب التنقل</td>
+              <td>:</td>
+              <td style={{ textAlign: 'center', borderBottom: '1px dotted #000' }}>مهمة</td>
+            </tr>
+            <tr style={{ height: '2cm' }}>
+              <td style={{ fontWeight: 'bold', textAlign: 'right' }}>تاريخ الانطلاق</td>
+              <td>:</td>
+              <td style={{ textAlign: 'center', borderBottom: '1px dotted #000' }}>{mission.startDate ? new Date(mission.startDate).toLocaleDateString('fr-FR') : ''}</td>
+            </tr>
+            <tr style={{ height: '2cm' }}>
+              <td style={{ fontWeight: 'bold', textAlign: 'right' }}>تاريخ الرجوع</td>
+              <td>:</td>
+              <td style={{ textAlign: 'center', borderBottom: '1px dotted #000' }}>{mission.endDate ? new Date(mission.endDate).toLocaleDateString('fr-FR') : ''}</td>
+            </tr>
+            <tr style={{ height: '2cm' }}>
+              <td style={{ fontWeight: 'bold', textAlign: 'right' }}>وسيلة النقل</td>
+              <td>:</td>
+              <td style={{ textAlign: 'center', borderBottom: '1px dotted #000' }}>{mission.transportMode?.nom || ''}</td>
+            </tr>
+            <tr style={{ height: '2cm' }}>
+              <td style={{ fontWeight: 'bold', textAlign: 'right' }}>يسافر الى</td>
+              <td>:</td>
+              <td style={{ textAlign: 'center', borderBottom: '1px dotted #000' }}>{mission.destinations && mission.destinations.length > 0 ? mission.destinations[0].name : ''}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      {/* Date et lieu en bas à gauche */}
+      <div style={{ position: 'absolute', left: '2cm', bottom: '3.5cm', fontSize: '1.1em' }}>
+        المدية : {new Date().toLocaleDateString('fr-FR')}
+      </div>
+      {/* Espace pour cachet/signature en bas à droite */}
+      <div style={{ position: 'absolute', right: '2cm', bottom: '1.5cm', fontSize: '1.1em', minWidth: 120 }}>
+        {/* Cachet/Signature */}
+      </div>
+    </div>
+  );
+};
 
 export default MissionPrint; 

@@ -67,7 +67,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { useReactToPrint } from 'react-to-print';
-import MissionPrint from './MissionPrint';
+import MissionPrint, { MissionPrintSimple } from './MissionPrint';
 import ReactDOM from 'react-dom';
 import ReactDOMServer from 'react-dom/server';
 
@@ -1624,12 +1624,28 @@ const Missions = () => {
       let content = `
         <html>
         <head>
-          <title>طباعة جميع المهام</title>
           <style>
             @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
-            body { font-family: 'Cairo', Arial, sans-serif; margin: 0; background: white; }
-            .print-mission { page-break-after: always; break-after: page; }
-            .print-mission:last-child { page-break-after: auto; break-after: auto; }
+            body { font-family: 'Cairo', Arial, sans-serif; margin: 0; padding: 0; background: white; }
+            .print-mission {
+              page-break-after: always; break-after: page;
+              width: 210mm;
+              height: 297mm;
+              margin: 0;
+              padding: 0;
+              background: white;
+              box-sizing: border-box;
+              position: relative;
+              display: block;
+            }
+            .print-mission:last-child { 
+              page-break-after: auto; 
+              break-after: auto; 
+            }
+            @page {
+              margin: 0;
+              size: A4;
+            }
           </style>
         </head>
         <body>
@@ -1639,7 +1655,7 @@ const Missions = () => {
       validMissionsData.forEach((missionData, idx) => {
         content += `<div class="print-mission">`;
         content += ReactDOMServer.renderToStaticMarkup(
-          <MissionPrint mission={missionData} />
+          <MissionPrintSimple mission={missionData} />
         );
         content += `</div>`;
       });
@@ -1755,6 +1771,7 @@ const Missions = () => {
                         onClick={() => handlePrintAllFilteredMissions()}
                         disabled={filteredMissions.length === 0}
                         sx={{ ml: 1 }}
+                        className="no-print"
                       >
                         طباعة جميع المهام ({filteredMissions.length})
                       </Button>
