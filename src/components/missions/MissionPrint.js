@@ -334,7 +334,7 @@ export const MissionPrintSimple = ({ mission }) => {
       width: '100%',
       height: '297mm',
       boxSizing: 'border-box',
-      padding: '2cm 1.5cm 1.5cm 1.5cm',
+      padding: '4cm 1.5cm 1.5cm 1.5cm',
       margin: 0,
       background: 'white',
       fontFamily: 'Cairo, "Arabic Typesetting", Arial, sans-serif',
@@ -367,49 +367,94 @@ export const MissionPrintSimple = ({ mission }) => {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '1.2em' }}>
           <tbody>
             <tr style={{ height: '2cm' }}>
-              <td style={{ fontWeight: 'bold', textAlign: 'right', width: '30%' }}>الاسم</td>
-              <td style={{ width: '5%' }}>:</td>
-              <td style={{ textAlign: 'center', width: '65%', borderBottom: '1px dotted #000' }}>{employee.prenom || ''}</td>
+              <td style={{ fontWeight: 'bold', textAlign: 'right', width: '35%' }}>الاسم :</td>
+              <td style={{ textAlign: 'center', width: '65%', position: 'relative' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '100%', paddingRight: '0.1cm' }}>
+                  <span style={{ color: '#000' }}>...................</span>
+                  <span style={{ marginLeft: '0.5cm', marginRight: '0.5cm' }}>{employee.prenom || ''}</span>
+                  <span style={{ color: '#000' }}>...................</span>
+                </div>
+              </td>
             </tr>
             <tr style={{ height: '2cm' }}>
-              <td style={{ fontWeight: 'bold', textAlign: 'right' }}>اللقب</td>
-              <td>:</td>
-              <td style={{ textAlign: 'center', borderBottom: '1px dotted #000' }}>{employee.nom || ''}</td>
+              <td style={{ fontWeight: 'bold', textAlign: 'right' }}>اللقب :</td>
+              <td style={{ textAlign: 'center', position: 'relative' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '100%', paddingRight: '0.1cm' }}>
+                  <span style={{ color: '#000' }}>...................</span>
+                  <span style={{ marginLeft: '0.5cm', marginRight: '0.5cm' }}>{employee.nom || ''}</span>
+                  <span style={{ color: '#000' }}>...................</span>
+                </div>
+              </td>
             </tr>
             <tr style={{ height: '2cm' }}>
-              <td style={{ fontWeight: 'bold', textAlign: 'right' }}>التعيين</td>
-              <td>:</td>
-              <td style={{ textAlign: 'center', borderBottom: '1px dotted #000' }}>{employee.centre || ''}</td>
+              <td style={{ fontWeight: 'bold', textAlign: 'right' }}>التعيين :</td>
+              <td style={{ textAlign: 'center', position: 'relative' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '100%', paddingRight: '0.1cm' }}>
+                  <span style={{ color: '#000' }}>...................</span>
+                  <span style={{ marginLeft: '0.5cm', marginRight: '0.5cm' }}>{employee.centre || ''}</span>
+                  <span style={{ color: '#000' }}>...................</span>
+                </div>
+              </td>
             </tr>
             <tr style={{ height: '2cm' }}>
-              <td style={{ fontWeight: 'bold', textAlign: 'right' }}>المهنة</td>
-              <td>:</td>
-              <td style={{ textAlign: 'center', borderBottom: '1px dotted #000' }}>{employee.poste || employee.fonction || ''}</td>
+              <td style={{ fontWeight: 'bold', textAlign: 'right' }}>المهنة :</td>
+              <td style={{ textAlign: 'center', position: 'relative' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '100%', paddingRight: '0.1cm' }}>
+                  <span style={{ color: '#000' }}>...................</span>
+                  <span style={{ marginLeft: '0.5cm', marginRight: '0.5cm' }}>{employee.poste || employee.fonction || ''}</span>
+                  <span style={{ color: '#000' }}>...................</span>
+                </div>
+              </td>
             </tr>
             <tr style={{ height: '2cm' }}>
-              <td style={{ fontWeight: 'bold', textAlign: 'right' }}>سبب التنقل</td>
-              <td>:</td>
-              <td style={{ textAlign: 'center', borderBottom: '1px dotted #000' }}>مهمة</td>
+              <td style={{ fontWeight: 'bold', textAlign: 'right' }}>سبب التنقل :</td>
+              <td style={{ textAlign: 'center', position: 'relative' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '100%', paddingRight: '0.1cm' }}>
+                  <span style={{ color: '#000' }}>...................</span>
+                  <span style={{ marginLeft: '0.5cm', marginRight: '0.5cm' }}>مهمة</span>
+                  <span style={{ color: '#000' }}>...................</span>
+                </div>
+              </td>
             </tr>
             <tr style={{ height: '2cm' }}>
-              <td style={{ fontWeight: 'bold', textAlign: 'right' }}>تاريخ الانطلاق</td>
-              <td>:</td>
-              <td style={{ textAlign: 'center', borderBottom: '1px dotted #000' }}>{mission.startDate ? new Date(mission.startDate).toLocaleDateString('fr-FR') : ''}</td>
+              <td style={{ fontWeight: 'bold', textAlign: 'right' }}>تاريخ الانطلاق :</td>
+              <td style={{ textAlign: 'center', position: 'relative' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '100%', paddingRight: '0.1cm' }}>
+                  <span style={{ color: '#000' }}>...................</span>
+                  <span style={{ marginLeft: '0.5cm', marginRight: '0.5cm' }}>{mission.startDate ? new Date(mission.startDate).toLocaleDateString('fr-FR') : ''}</span>
+                  <span style={{ color: '#000' }}>...................</span>
+                </div>
+              </td>
             </tr>
             <tr style={{ height: '2cm' }}>
-              <td style={{ fontWeight: 'bold', textAlign: 'right' }}>تاريخ الرجوع</td>
-              <td>:</td>
-              <td style={{ textAlign: 'center', borderBottom: '1px dotted #000' }}>{mission.endDate ? new Date(mission.endDate).toLocaleDateString('fr-FR') : ''}</td>
+              <td style={{ fontWeight: 'bold', textAlign: 'right' }}>تاريخ الرجوع :</td>
+              <td style={{ textAlign: 'center', position: 'relative' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '100%', paddingRight: '0.1cm' }}>
+                  <span style={{ color: '#000' }}>...................</span>
+                  <span style={{ marginLeft: '0.5cm', marginRight: '0.5cm' }}>{mission.endDate ? new Date(mission.endDate).toLocaleDateString('fr-FR') : ''}</span>
+                  <span style={{ color: '#000' }}>...................</span>
+                </div>
+              </td>
             </tr>
             <tr style={{ height: '2cm' }}>
-              <td style={{ fontWeight: 'bold', textAlign: 'right' }}>وسيلة النقل</td>
-              <td>:</td>
-              <td style={{ textAlign: 'center', borderBottom: '1px dotted #000' }}>{mission.transportMode?.nom || ''}</td>
+              <td style={{ fontWeight: 'bold', textAlign: 'right' }}>وسيلة النقل :</td>
+              <td style={{ textAlign: 'center', position: 'relative' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '100%', paddingRight: '0.1cm' }}>
+                  <span style={{ color: '#000' }}>...................</span>
+                  <span style={{ marginLeft: '0.5cm', marginRight: '0.5cm' }}>{mission.transportMode?.nom || ''}</span>
+                  <span style={{ color: '#000' }}>...................</span>
+                </div>
+              </td>
             </tr>
             <tr style={{ height: '2cm' }}>
-              <td style={{ fontWeight: 'bold', textAlign: 'right' }}>يسافر الى</td>
-              <td>:</td>
-              <td style={{ textAlign: 'center', borderBottom: '1px dotted #000' }}>{mission.destinations && mission.destinations.length > 0 ? mission.destinations[0].name : ''}</td>
+              <td style={{ fontWeight: 'bold', textAlign: 'right' }}>يسافر الى :</td>
+              <td style={{ textAlign: 'center', position: 'relative' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '100%', paddingRight: '0.1cm' }}>
+                  <span style={{ color: '#000' }}>...................</span>
+                  <span style={{ marginLeft: '0.5cm', marginRight: '0.5cm' }}>{mission.destinations && mission.destinations.length > 0 ? mission.destinations[0].name : ''}</span>
+                  <span style={{ color: '#000' }}>...................</span>
+                </div>
+              </td>
             </tr>
           </tbody>
         </table>
