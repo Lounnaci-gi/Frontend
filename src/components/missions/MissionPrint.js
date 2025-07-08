@@ -1,6 +1,7 @@
 import React, { forwardRef } from 'react';
 import { Box, Typography } from '@mui/material';
 import QRCode from 'qrcode.react';
+import { QRCodeSVG } from 'qrcode.react';
 
 const MissionPrint = forwardRef(({ mission }, ref) => {
   const employee = mission.employee || {};
@@ -356,10 +357,10 @@ export const MissionPrintSimple = ({ mission }) => {
         <div style={{ fontSize: '2em', fontWeight: 'bold', textDecoration: 'underline', fontFamily: '"Arabic Typesetting", "Traditional Arabic", Arial, sans-serif', flex: 1, textAlign: 'center' }}>
           تكليف بمهمة
         </div>
-        {/* QR code au-dessus du numéro mission à gauche */}
+        {/* QR code en dessous du numéro mission à gauche */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: 120 }}>
-          <QRCode value={qrData} size={60} level="M" includeMargin={true} />
-          <div style={{ fontSize: '1em', fontWeight: 'bold', marginTop: '-2cm' }}>N°: {mission.code_mission || ''}</div>
+          <div style={{ fontSize: '1em', fontWeight: 'bold', marginBottom: '0.5em' }}>N°: {mission.code_mission || ''}</div>
+          <QRCodeSVG value={qrData} size={60} level="M" includeMargin={true} />
         </div>
       </div>
       {/* Tableau des champs avec pointillés */}
