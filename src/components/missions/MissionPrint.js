@@ -369,90 +369,90 @@ export const MissionPrintSimple = ({ mission }) => {
           <tbody>
             <tr style={{ height: '2cm' }}>
               <td style={{ fontWeight: 'bold', textAlign: 'right', width: '35%' }}>الاسم :</td>
-              <td style={{ textAlign: 'center', width: '65%', position: 'relative' }}>
+              <td style={{ textAlign: 'center', width: '85%', position: 'relative' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '100%', paddingRight: '0' }}>
                   <span style={{ color: '#000' }}>...........................</span>
-                  <span style={{ marginLeft: '0.2cm', marginRight: '0.2cm' }}>{employee.prenom || ''}</span>
+                  <span style={{ marginLeft: '0.2cm', marginRight: '0.2cm', minWidth: '4.5cm' }}>{employee.prenom || ''}</span>
                   <span style={{ color: '#000' }}>...........................</span>
                 </div>
               </td>
             </tr>
             <tr style={{ height: '2cm' }}>
               <td style={{ fontWeight: 'bold', textAlign: 'right' }}>اللقب :</td>
-              <td style={{ textAlign: 'center', position: 'relative' }}>
+              <td style={{ textAlign: 'center', width: '85%', position: 'relative' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '100%', paddingRight: '0' }}>
                   <span style={{ color: '#000' }}>...........................</span>
-                  <span style={{ marginLeft: '0.2cm', marginRight: '0.2cm' }}>{employee.nom || ''}</span>
+                  <span style={{ marginLeft: '0.2cm', marginRight: '0.2cm', minWidth: '4.5cm' }}>{employee.nom || ''}</span>
                   <span style={{ color: '#000' }}>...........................</span>
                 </div>
               </td>
             </tr>
             <tr style={{ height: '2cm' }}>
               <td style={{ fontWeight: 'bold', textAlign: 'right' }}>التعيين :</td>
-              <td style={{ textAlign: 'center', position: 'relative' }}>
+              <td style={{ textAlign: 'center', width: '85%', position: 'relative' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '100%', paddingRight: '0' }}>
                   <span style={{ color: '#000' }}>...........................</span>
-                  <span style={{ marginLeft: '0.2cm', marginRight: '0.2cm' }}>{employee.centre || ''}</span>
+                  <span style={{ marginLeft: '0.2cm', marginRight: '0.2cm', minWidth: '4.5cm' }}>{employee.centre || ''}</span>
                   <span style={{ color: '#000' }}>...........................</span>
                 </div>
               </td>
             </tr>
             <tr style={{ height: '2cm' }}>
               <td style={{ fontWeight: 'bold', textAlign: 'right' }}>المهنة :</td>
-              <td style={{ textAlign: 'center', position: 'relative' }}>
+              <td style={{ textAlign: 'center', width: '85%', position: 'relative' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '100%', paddingRight: '0' }}>
                   <span style={{ color: '#000' }}>...........................</span>
-                  <span style={{ marginLeft: '0.2cm', marginRight: '0.2cm' }}>{employee.poste || employee.fonction || ''}</span>
+                  <span style={{ marginLeft: '0.2cm', marginRight: '0.2cm', minWidth: '4.5cm' }}>{employee.poste || employee.fonction || ''}</span>
                   <span style={{ color: '#000' }}>...........................</span>
                 </div>
               </td>
             </tr>
             <tr style={{ height: '2cm' }}>
               <td style={{ fontWeight: 'bold', textAlign: 'right' }}>سبب التنقل :</td>
-              <td style={{ textAlign: 'center', position: 'relative' }}>
+              <td style={{ textAlign: 'center', width: '85%', position: 'relative' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '100%', paddingRight: '0' }}>
                   <span style={{ color: '#000' }}>...........................</span>
-                  <span style={{ marginLeft: '0.2cm', marginRight: '0.2cm' }}>مهمة</span>
+                  <span style={{ marginLeft: '0.2cm', marginRight: '0.2cm', minWidth: '4.5cm' }}>مهمة</span>
                   <span style={{ color: '#000' }}>...........................</span>
                 </div>
               </td>
             </tr>
             <tr style={{ height: '2cm' }}>
               <td style={{ fontWeight: 'bold', textAlign: 'right' }}>تاريخ الانطلاق :</td>
-              <td style={{ textAlign: 'center', position: 'relative' }}>
+              <td style={{ textAlign: 'center', width: '85%', position: 'relative' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '100%', paddingRight: '0' }}>
                   <span style={{ color: '#000' }}>...........................</span>
-                  <span style={{ marginLeft: '0.2cm', marginRight: '0.2cm' }}>{mission.startDate ? new Date(mission.startDate).toLocaleDateString('fr-FR') : ''}</span>
+                  <span style={{ marginLeft: '0.2cm', marginRight: '0.2cm', minWidth: '4.5cm' }}>{mission.startDate ? new Date(mission.startDate).toLocaleDateString('fr-FR') : ''}</span>
                   <span style={{ color: '#000' }}>...........................</span>
                 </div>
               </td>
             </tr>
             <tr style={{ height: '2cm' }}>
               <td style={{ fontWeight: 'bold', textAlign: 'right' }}>تاريخ الرجوع :</td>
-              <td style={{ textAlign: 'center', position: 'relative' }}>
+              <td style={{ textAlign: 'center', width: '85%', position: 'relative' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '100%', paddingRight: '0' }}>
                   <span style={{ color: '#000' }}>...........................</span>
-                  <span style={{ marginLeft: '0.2cm', marginRight: '0.2cm' }}>{mission.endDate ? new Date(mission.endDate).toLocaleDateString('fr-FR') : ''}</span>
+                  <span style={{ marginLeft: '0.2cm', marginRight: '0.2cm', minWidth: '4.5cm' }}>{mission.endDate ? new Date(mission.endDate).toLocaleDateString('fr-FR') : ''}</span>
                   <span style={{ color: '#000' }}>...........................</span>
                 </div>
               </td>
             </tr>
             <tr style={{ height: '2cm' }}>
               <td style={{ fontWeight: 'bold', textAlign: 'right' }}>وسيلة النقل :</td>
-              <td style={{ textAlign: 'center', position: 'relative' }}>
+              <td style={{ textAlign: 'center', width: '85%', position: 'relative' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '100%', paddingRight: '0' }}>
                   <span style={{ color: '#000' }}>...........................</span>
-                  <span style={{ marginLeft: '0.2cm', marginRight: '0.2cm' }}>{mission.transportMode?.nom || ''}</span>
+                  <span style={{ marginLeft: '0.2cm', marginRight: '0.2cm', minWidth: '4.5cm' }}>{mission.transportMode?.nom || ''}</span>
                   <span style={{ color: '#000', width: '4cm' }}>...........................</span>
                 </div>
               </td>
             </tr>
             <tr style={{ height: '2cm' }}>
               <td style={{ fontWeight: 'bold', textAlign: 'right' }}>يسافر الى :</td>
-              <td style={{ textAlign: 'center', position: 'relative' }}>
+              <td style={{ textAlign: 'center', width: '85%', position: 'relative' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', height: '100%', paddingRight: '0' }}>
                   <span style={{ color: '#000' }}>...........................</span>
-                  <span style={{ marginLeft: '0.2cm', marginRight: '0.2cm' }}>{mission.destinations && mission.destinations.length > 0 ? mission.destinations[0].name : ''}</span>
+                  <span style={{ marginLeft: '0.2cm', marginRight: '0.2cm', minWidth: '4.5cm' }}>{mission.destinations && mission.destinations.length > 0 ? mission.destinations[0].name : ''}</span>
                   <span style={{ color: '#000' }}>...........................</span>
                 </div>
               </td>
@@ -467,6 +467,328 @@ export const MissionPrintSimple = ({ mission }) => {
       {/* Espace pour cachet/signature en bas à droite */}
       <div style={{ position: 'absolute', right: '2cm', bottom: '1.5cm', fontSize: '1.1em', minWidth: 120 }}>
         {/* Cachet/Signature */}
+      </div>
+    </div>
+  );
+};
+
+// Version responsive pour mobile
+export const MissionPrintMobile = ({ mission }) => {
+  const employee = mission.employee || {};
+  const qrData = JSON.stringify({
+    nom: employee.nom || '',
+    prenom: employee.prenom || '',
+    fonction: employee.fonction || employee.poste || '',
+    centre: employee.centre || '',
+    code_mission: mission.code_mission || '',
+    startDate: mission.startDate || '',
+    endDate: mission.endDate || '',
+  });
+  
+  return (
+    <div style={{
+      width: '100%',
+      padding: '16px',
+      background: 'white',
+      fontFamily: 'Cairo, "Arabic Typesetting", Arial, sans-serif',
+      direction: 'rtl',
+      borderRadius: '8px',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+      margin: '8px 0',
+    }}>
+      {/* En-tête mobile */}
+      <div style={{ 
+        textAlign: 'center', 
+        marginBottom: '20px',
+        borderBottom: '2px solid #e0e0e0',
+        paddingBottom: '16px'
+      }}>
+        <div style={{ fontSize: '1.2em', fontWeight: 'bold', marginBottom: '8px' }}>
+          تكليف بمهمة
+        </div>
+        <div style={{ fontSize: '0.9em', color: '#666' }}>
+          N°: {mission.code_mission || ''}
+        </div>
+        <div style={{ marginTop: '8px' }}>
+          <QRCodeSVG value={qrData} size={40} level="M" includeMargin={true} />
+        </div>
+      </div>
+      
+      {/* Informations de l'employé */}
+      <div style={{ marginBottom: '16px' }}>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          padding: '8px 0',
+          borderBottom: '1px solid #f0f0f0'
+        }}>
+          <span style={{ fontWeight: 'bold', fontSize: '0.9em' }}>الاسم:</span>
+          <span style={{ fontSize: '0.9em' }}>{employee.prenom || ''}</span>
+        </div>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          padding: '8px 0',
+          borderBottom: '1px solid #f0f0f0'
+        }}>
+          <span style={{ fontWeight: 'bold', fontSize: '0.9em' }}>اللقب:</span>
+          <span style={{ fontSize: '0.9em' }}>{employee.nom || ''}</span>
+        </div>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          padding: '8px 0',
+          borderBottom: '1px solid #f0f0f0'
+        }}>
+          <span style={{ fontWeight: 'bold', fontSize: '0.9em' }}>التعيين:</span>
+          <span style={{ fontSize: '0.9em' }}>{employee.centre || ''}</span>
+        </div>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          padding: '8px 0',
+          borderBottom: '1px solid #f0f0f0'
+        }}>
+          <span style={{ fontWeight: 'bold', fontSize: '0.9em' }}>المهنة:</span>
+          <span style={{ fontSize: '0.9em' }}>{employee.poste || employee.fonction || ''}</span>
+        </div>
+      </div>
+      
+      {/* Informations de la mission */}
+      <div style={{ marginBottom: '16px' }}>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          padding: '8px 0',
+          borderBottom: '1px solid #f0f0f0'
+        }}>
+          <span style={{ fontWeight: 'bold', fontSize: '0.9em' }}>سبب التنقل:</span>
+          <span style={{ fontSize: '0.9em' }}>مهمة</span>
+        </div>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          padding: '8px 0',
+          borderBottom: '1px solid #f0f0f0'
+        }}>
+          <span style={{ fontWeight: 'bold', fontSize: '0.9em' }}>تاريخ الانطلاق:</span>
+          <span style={{ fontSize: '0.9em' }}>
+            {mission.startDate ? new Date(mission.startDate).toLocaleDateString('fr-FR') : ''}
+          </span>
+        </div>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          padding: '8px 0',
+          borderBottom: '1px solid #f0f0f0'
+        }}>
+          <span style={{ fontWeight: 'bold', fontSize: '0.9em' }}>تاريخ الرجوع:</span>
+          <span style={{ fontSize: '0.9em' }}>
+            {mission.endDate ? new Date(mission.endDate).toLocaleDateString('fr-FR') : ''}
+          </span>
+        </div>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          padding: '8px 0',
+          borderBottom: '1px solid #f0f0f0'
+        }}>
+          <span style={{ fontWeight: 'bold', fontSize: '0.9em' }}>وسيلة النقل:</span>
+          <span style={{ fontSize: '0.9em' }}>{mission.transportMode?.nom || ''}</span>
+        </div>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          padding: '8px 0',
+          borderBottom: '1px solid #f0f0f0'
+        }}>
+          <span style={{ fontWeight: 'bold', fontSize: '0.9em' }}>يسافر الى:</span>
+          <span style={{ fontSize: '0.9em' }}>
+            {mission.destinations && mission.destinations.length > 0 ? mission.destinations[0].name : ''}
+          </span>
+        </div>
+      </div>
+      
+      {/* Date et signature */}
+      <div style={{ 
+        marginTop: '16px', 
+        textAlign: 'center',
+        fontSize: '0.8em',
+        color: '#666'
+      }}>
+        المدية : {new Date().toLocaleDateString('fr-FR')}
+      </div>
+    </div>
+  );
+};
+
+// Version responsive pour mobile de MissionPrint principal
+export const MissionPrintMobileIndividual = ({ mission }) => {
+  const employee = mission.employee || {};
+  
+  // Données pour le QR code
+  const qrData = JSON.stringify({
+    nom: employee.nom || 'N/A',
+    prenom: employee.prenom || 'N/A',
+    fonction: employee.fonction || employee.poste || 'N/A',
+    centre: employee.centre || 'N/A'
+  });
+
+  return (
+    <div style={{
+      width: '100%',
+      padding: '16px',
+      background: 'white',
+      fontFamily: 'Cairo, "Arabic Typesetting", Arial, sans-serif',
+      direction: 'rtl',
+      borderRadius: '8px',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+      margin: '8px 0',
+    }}>
+      {/* En-tête mobile */}
+      <div style={{ 
+        textAlign: 'center', 
+        marginBottom: '20px',
+        borderBottom: '2px solid #e0e0e0',
+        paddingBottom: '16px'
+      }}>
+        <div style={{ fontSize: '1.4em', fontWeight: 'bold', marginBottom: '8px', textDecoration: 'underline' }}>
+          تكليف بمهمة
+        </div>
+        <div style={{ fontSize: '0.9em', color: '#666', marginBottom: '8px' }}>
+          منطقة الجزائر - ولاية المدية
+        </div>
+        <div style={{ fontSize: '1em', fontWeight: 'bold', marginBottom: '8px' }}>
+          N°: {mission.code_mission || ''}
+        </div>
+        <div style={{ marginTop: '8px' }}>
+          <QRCodeSVG value={qrData} size={50} level="M" includeMargin={true} />
+        </div>
+      </div>
+      
+      {/* Informations de l'employé */}
+      <div style={{ marginBottom: '16px' }}>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          padding: '12px 0',
+          borderBottom: '1px solid #f0f0f0'
+        }}>
+          <span style={{ fontWeight: 'bold', fontSize: '1em' }}>الاسم:</span>
+          <span style={{ fontSize: '1em' }}>{employee.prenom || ''}</span>
+        </div>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          padding: '12px 0',
+          borderBottom: '1px solid #f0f0f0'
+        }}>
+          <span style={{ fontWeight: 'bold', fontSize: '1em' }}>اللقب:</span>
+          <span style={{ fontSize: '1em' }}>{employee.nom || ''}</span>
+        </div>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          padding: '12px 0',
+          borderBottom: '1px solid #f0f0f0'
+        }}>
+          <span style={{ fontWeight: 'bold', fontSize: '1em' }}>التعيين:</span>
+          <span style={{ fontSize: '1em' }}>{employee.centre || ''}</span>
+        </div>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          padding: '12px 0',
+          borderBottom: '1px solid #f0f0f0'
+        }}>
+          <span style={{ fontWeight: 'bold', fontSize: '1em' }}>المهنة:</span>
+          <span style={{ fontSize: '1em' }}>{employee.poste || employee.fonction || ''}</span>
+        </div>
+      </div>
+      
+      {/* Informations de la mission */}
+      <div style={{ marginBottom: '16px' }}>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          padding: '12px 0',
+          borderBottom: '1px solid #f0f0f0'
+        }}>
+          <span style={{ fontWeight: 'bold', fontSize: '1em' }}>سبب التنقل:</span>
+          <span style={{ fontSize: '1em' }}>مهمة</span>
+        </div>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          padding: '12px 0',
+          borderBottom: '1px solid #f0f0f0'
+        }}>
+          <span style={{ fontWeight: 'bold', fontSize: '1em' }}>تاريخ الانطلاق:</span>
+          <span style={{ fontSize: '1em' }}>
+            {mission.startDate ? new Date(mission.startDate).toLocaleDateString('fr-FR') : ''}
+          </span>
+        </div>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          padding: '12px 0',
+          borderBottom: '1px solid #f0f0f0'
+        }}>
+          <span style={{ fontWeight: 'bold', fontSize: '1em' }}>تاريخ الرجوع:</span>
+          <span style={{ fontSize: '1em' }}>
+            {mission.endDate ? new Date(mission.endDate).toLocaleDateString('fr-FR') : ''}
+          </span>
+        </div>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          padding: '12px 0',
+          borderBottom: '1px solid #f0f0f0'
+        }}>
+          <span style={{ fontWeight: 'bold', fontSize: '1em' }}>وسيلة النقل:</span>
+          <span style={{ fontSize: '1em' }}>{mission.transportMode?.nom || ''}</span>
+        </div>
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          padding: '12px 0',
+          borderBottom: '1px solid #f0f0f0'
+        }}>
+          <span style={{ fontWeight: 'bold', fontSize: '1em' }}>يسافر الى:</span>
+          <span style={{ fontSize: '1em' }}>
+            {mission.destinations && mission.destinations.length > 0 ? mission.destinations[0].name : ''}
+          </span>
+        </div>
+      </div>
+      
+      {/* Date et signature */}
+      <div style={{ 
+        marginTop: '20px', 
+        textAlign: 'center',
+        fontSize: '0.9em',
+        color: '#666',
+        borderTop: '1px solid #e0e0e0',
+        paddingTop: '16px'
+      }}>
+        المدية : {new Date().toLocaleDateString('fr-FR')}
       </div>
     </div>
   );

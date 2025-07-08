@@ -17,6 +17,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  direction: rtl;
   background: var(--background-color);
   color: var(--text-color);
   overflow-x: hidden; /* Empêcher le scroll horizontal */
@@ -25,6 +26,172 @@ body {
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+/* --- Responsive Design Global --- */
+* {
+  box-sizing: border-box;
+}
+
+/* Tableaux responsifs */
+@media (max-width: 768px) {
+  .MuiTableContainer-root {
+    overflow-x: auto !important;
+  }
+  
+  .MuiTable-root {
+    min-width: 600px !important;
+  }
+  
+  .MuiTableCell-root {
+    padding: 8px 4px !important;
+    font-size: 0.875rem !important;
+  }
+}
+
+/* Formulaires responsifs */
+@media (max-width: 600px) {
+  .MuiDialog-paper {
+    margin: 16px !important;
+    width: calc(100% - 32px) !important;
+    max-width: none !important;
+  }
+  
+  .MuiTextField-root {
+    margin-bottom: 16px !important;
+  }
+  
+  .MuiButton-root {
+    width: 100% !important;
+    margin-bottom: 8px !important;
+  }
+  
+  .MuiGrid-container {
+    margin: 0 !important;
+  }
+  
+  .MuiGrid-item {
+    padding: 8px !important;
+  }
+}
+
+/* Navigation mobile */
+@media (max-width: 900px) {
+  .MuiAppBar-root {
+    height: 64px !important;
+  }
+  
+  .MuiToolbar-root {
+    min-height: 64px !important;
+  }
+  
+  .MuiDrawer-paper {
+    width: 280px !important;
+  }
+}
+
+/* Cartes et conteneurs responsifs */
+@media (max-width: 600px) {
+  .MuiCard-root {
+    margin: 8px 0 !important;
+  }
+  
+  .MuiPaper-root {
+    padding: 16px !important;
+  }
+  
+  .MuiBox-root {
+    padding: 8px !important;
+  }
+}
+
+/* Typographie responsive */
+@media (max-width: 600px) {
+  .MuiTypography-h1 {
+    font-size: 1.75rem !important;
+  }
+  
+  .MuiTypography-h2 {
+    font-size: 1.5rem !important;
+  }
+  
+  .MuiTypography-h3 {
+    font-size: 1.25rem !important;
+  }
+  
+  .MuiTypography-h4 {
+    font-size: 1.125rem !important;
+  }
+  
+  .MuiTypography-h5 {
+    font-size: 1rem !important;
+  }
+  
+  .MuiTypography-h6 {
+    font-size: 0.875rem !important;
+  }
+}
+
+/* Amélioration de l'accessibilité mobile */
+@media (max-width: 600px) {
+  .MuiIconButton-root {
+    min-width: 44px !important;
+    min-height: 44px !important;
+  }
+  
+  .MuiChip-root {
+    font-size: 0.75rem !important;
+  }
+  
+  .MuiAutocomplete-root .MuiInputBase-root {
+    font-size: 1rem !important;
+  }
+}
+
+/* Optimisation pour les écrans tactiles */
+@media (max-width: 600px) {
+  .MuiButton-root {
+    min-height: 48px !important;
+  }
+  
+  .MuiTextField-root .MuiInputBase-root {
+    min-height: 48px !important;
+  }
+  
+  .MuiSelect-select {
+    min-height: 48px !important;
+  }
+}
+
+/* Amélioration de la lisibilité sur mobile */
+@media (max-width: 600px) {
+  .MuiTableCell-root {
+    font-size: 0.875rem !important;
+    line-height: 1.2 !important;
+  }
+  
+  .MuiTypography-body1 {
+    font-size: 0.875rem !important;
+  }
+  
+  .MuiTypography-body2 {
+    font-size: 0.75rem !important;
+  }
+}
+
+/* Optimisation des espacements sur mobile */
+@media (max-width: 600px) {
+  .MuiStack-root {
+    gap: 8px !important;
+  }
+  
+  .MuiGrid-container {
+    gap: 8px !important;
+  }
+  
+  .MuiBox-root {
+    gap: 8px !important;
+  }
 }
 
 /* Améliorations responsive globales */

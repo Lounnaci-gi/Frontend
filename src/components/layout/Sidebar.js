@@ -7,7 +7,9 @@ import {
   ListItemText,
   Toolbar,
   Divider,
-  Box
+  Box,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -31,6 +33,10 @@ const menuItems = [
 const Sidebar = ({ open, handleDrawerToggle }) => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+
+  if (isMobile) return null; // Ne pas afficher la sidebar sur mobile
 
   const handleNavigation = (path) => {
     navigate(path);
